@@ -691,7 +691,7 @@ export default function App() {
             </div>
             <div>
               <h1 className={`text-base md:text-lg font-bold tracking-tight flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                تحلیل‌گر محاسباتی و محلی ابرکلمات تجربه مشتری (CX)
+                تحلیلگر محاسباتی  ابرکلمات تجربه مشتری (CX)
               </h1>
             </div>
           </div>
@@ -786,13 +786,6 @@ export default function App() {
                 <Layers className="w-4 h-4 text-indigo-500" />
                 <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>مدیریت لیست‌های سفید (دسته‌بندی شده)</h3>
               </div>
-              <button 
-                onClick={handleResetGroups}
-                className={`text-slate-400 hover:text-rose-600 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${isDarkMode ? 'hover:text-rose-400' : 'hover:text-rose-600'}`}
-                title="بازگرداندن به لیست کلمات پیش‌فرض"
-              >
-                بازنشانی کل
-              </button>
             </div>
 
             <p className={`text-[11px] mb-3 leading-relaxed font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -1052,9 +1045,6 @@ export default function App() {
                 <span className={`text-xs font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                   <CheckCircle className="w-4 h-4 text-emerald-500" />
                   نمایش کل محتوای فایل چت ({chatRows.length} ردیف داده بارگذاری شده)
-                </span>
-                <span className={`text-[10px] font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  شناسایی خودکار ساختار جدول بر اساس جداکننده کاما (CSV)
                 </span>
               </div>
 
