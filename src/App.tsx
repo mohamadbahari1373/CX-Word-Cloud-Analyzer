@@ -691,10 +691,8 @@ export default function App() {
             </div>
             <div>
               <h1 className={`text-base md:text-lg font-bold tracking-tight flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                تحلیل‌گر هوشمند ابرکلمات تجربه مشتری (CX)
-                <span className={`uppercase text-[10px] tracking-widest font-mono px-2 py-0.5 rounded border ${isDarkMode ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' : 'text-[#0057D9] bg-[#0057D9]/5 border-[#0057D9]/15'}`}>PRO v2.4</span>
+                تحلیل‌گر محاسباتی و محلی ابرکلمات تجربه مشتری (CX)
               </h1>
-              <p className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>پلتفرم تخصصی پردازش بازخورد، لیست سفید پویا و هماهنگ‌ساز API</p>
             </div>
           </div>
 
@@ -726,32 +724,7 @@ export default function App() {
       {/* CORE WORKSPACE CONTENT */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* TOP SYSTEM SUMMARY / INSTRUCTIONS BANNER */}
-        <section className={`lg:col-span-12 rounded-xl p-6 relative overflow-hidden border shadow-sm transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-r from-slate-900 via-indigo-950/20 to-slate-900 border-slate-800 text-slate-100' : 'bg-gradient-to-r from-white via-indigo-50/20 to-white border-slate-200 text-slate-800'}`}>
-          <div className="absolute top-0 left-0 w-64 h-64 bg-[#0057D9]/5 rounded-full -translate-x-32 -translate-y-32 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 right-0 w-80 h-80 bg-[#0057D9]/5 rounded-full translate-x-40 translate-y-40 blur-3xl pointer-events-none" />
-          
-          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="max-w-3xl">
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-md inline-block mb-3 border ${isDarkMode ? 'bg-[#0057D9]/15 text-indigo-300 border-[#0057D9]/30' : 'bg-[#0057D9]/5 text-[#0057D9] border-[#0057D9]/15'}`}>
-                ابزار ویژه مهندسی و تحلیل تجربه مشتری
-              </span>
-              <h2 className={`text-xl md:text-2xl font-black tracking-tight ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>محیط کار پردازش و تحلیل کلمات گفتگوها</h2>
-              <p className={`text-xs mt-2 leading-relaxed font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                فایل چت‌های خود را با فرمت CSV بارگذاری نمایید یا از داده‌های سناریوی پیش‌فرض استفاده کنید. با تعریف واژه‌های دلخواه در لیست سفید، میزان اثربخشی و تکرار واژه‌ها را استخراج نموده و با کلیک روی هر کلمه در ابرکلمات، خروجی داده‌ی ساختاریافته‌ی API دریافت کنید.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2 shrink-0">
-              <button 
-                onClick={() => setCsvRawText(DEFAULT_CSV_CONTENT)} 
-                className={`font-bold text-xs px-4 py-2.5 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'}`}
-              >
-                <RotateCcw className="w-4 h-4 text-[#0057D9]" />
-                بازنشانی به داده پیش‌فرض
-              </button>
-            </div>
-          </div>
-        </section>
+
 
         {/* METRICS & QUICK INSIGHTS BAR */}
         <section className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -972,73 +945,7 @@ export default function App() {
             })()}
           </div>
 
-          {/* BIDIRECTIONAL JSON API DATA ENGINE */}
-          <div id="json-api-panel" className={`rounded-xl border shadow-lg p-5 flex flex-col flex-grow transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
-            <div className={`flex items-center justify-between pb-3 border-b mb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-2">
-                <Code className="w-4 h-4 text-indigo-500" />
-                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>هماهنگ‌ساز دوطرفه JSON API</h3>
-              </div>
-              <div className={`flex items-center gap-1 p-1 rounded-lg text-[10px] border ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
-                <button
-                  onClick={() => setIsJsonMode(false)}
-                  className={`px-2 py-1 rounded transition-all font-semibold cursor-pointer ${!isJsonMode ? 'bg-indigo-600 text-white shadow-md' : (isDarkMode ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
-                >
-                  تحلیل خودکار
-                </button>
-                <button
-                  onClick={() => setIsJsonMode(true)}
-                  className={`px-2 py-1 rounded transition-all font-semibold cursor-pointer ${isJsonMode ? 'bg-indigo-600 text-white shadow-md' : (isDarkMode ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
-                >
-                  ویرایش دستی
-                </button>
-              </div>
-            </div>
 
-            <p className={`text-xs mb-3 leading-relaxed font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              {isJsonMode 
-                ? "شما در حالت ویرایش دستی هستید. می‌توانید فرمت آرایه کلمات ابرکلمات زیر را مستقیماً ویرایش کنید تا ابر کلمات متناظر با آن فورا رندر شود."
-                : "آرایه ساختاریافته‌ی JSON زیر بازخورد بلادرنگ موتور تحلیل برای رندر ابر کلمات است."
-              }
-            </p>
-
-            <div className="relative flex-grow flex flex-col min-h-[220px]">
-              <textarea
-                value={customJsonArray}
-                onChange={(e) => handleJsonInputChange(e.target.value)}
-                readOnly={!isJsonMode}
-                dir="ltr"
-                className={`w-full flex-grow text-xs font-mono p-3 rounded-lg border focus:outline-none transition-all resize-none min-h-[200px] ${
-                  isDarkMode 
-                    ? 'bg-slate-950 text-emerald-400 border-slate-800' 
-                    : 'bg-slate-50 text-emerald-700 border-slate-200'
-                } ${
-                  isJsonMode 
-                    ? 'border-indigo-500 focus:ring-2 focus:ring-indigo-500/15' 
-                    : 'select-all cursor-text'
-                }`}
-              />
-              <button
-                onClick={() => triggerCopy(customJsonArray, 'json_api')}
-                className={`absolute top-3 right-3 transition-colors p-1.5 rounded text-xs font-mono flex items-center gap-1 border ${
-                  isDarkMode 
-                    ? 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border-slate-800' 
-                    : 'bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
-                }`}
-                title="کپی کل آرایه JSON"
-              >
-                {copiedState === 'json_api' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>کپی</span>
-              </button>
-            </div>
-
-            {jsonError && (
-              <div className="mt-3 p-3 bg-rose-950/30 border border-rose-900/50 rounded-lg flex items-start gap-2 text-rose-400 text-xs">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span className="font-medium">{jsonError}</span>
-              </div>
-            )}
-          </div>
         </section>
 
         {/* CENTER COLUMN: INTERACTIVE WORD CLOUD & SELECTED METADATA */}
@@ -1048,8 +955,8 @@ export default function App() {
           <div className={`rounded-xl border shadow-lg p-5 flex flex-col flex-grow transition-colors duration-300 ${isDarkMode ? 'bg-slate-900/40 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
             <div className={`flex items-center justify-between pb-3 border-b mb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>ابر کلمات تعاملی و هوشمند بازخوردهای مشتریان</h3>
+                <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
+                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>ابر کلمات محاسباتی و تعاملی بازخوردهای مشتریان</h3>
               </div>
               <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 رندر بر اساس {isJsonMode ? 'آرایه ویرایشی JSON' : 'تحلیل فایل بارگذاری شده'}
@@ -1062,115 +969,9 @@ export default function App() {
               selectedWord={selectedWordMetadata}
               isDarkMode={isDarkMode}
             />
-
-            {/* COMPACT CLOUD ACTION EXPLANATION */}
-            <p className={`text-xs text-center mt-3 font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              💡 برای بررسی دقیق‌تر، دریافت سند خروجی JSON و فیلتر کردن گفتگوهای مرتبط، بر روی هر کلمه در ابر بالا کلیک کنید.
-            </p>
           </div>
 
-          {/* SELECTED WORD METADATA (JSON PAYLOAD OUTPUT) */}
-          <div id="metadata-output" className={`rounded-xl border shadow-sm p-5 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
-            <div className={`flex items-center justify-between pb-2 border-b mb-3 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-2">
-                <Code className="w-4 h-4 text-[#0057D9]" />
-                <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>خروجی متادیتا ساختاریافته کلمه انتخاب شده (JSON API Output)</h4>
-              </div>
-              {selectedWordMetadata && (
-                <button
-                  onClick={() => triggerCopy(JSON.stringify(selectedWordMetadata, null, 2), 'metadata')}
-                  className={`text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors ${isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-[#0057D9] hover:text-indigo-800'}`}
-                >
-                  {copiedState === 'metadata' ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      <span className="text-emerald-500">کپی شد!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>کپی خروجی JSON</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
 
-            {selectedWordMetadata ? (
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div className="md:col-span-8">
-                  <div className={`p-3.5 rounded-lg border h-full flex flex-col justify-between transition-colors duration-300 ${isDarkMode ? 'bg-slate-950 border-slate-800/80 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-mono block">کلمه کلیدی انتخابی</span>
-                      <h5 className={`text-base font-bold mt-0.5 ${isDarkMode ? 'text-indigo-400' : 'text-[#0057D9]'}`}>{selectedWordMetadata.text}</h5>
-                      <p className={`text-xs mt-2 leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                        این کلمه در مجموع کل چت‌های آپلود شده <span className={`font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-850'}`}>{selectedWordMetadata.value} مرتبه</span> تکرار شده است که معادل <span className={`font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-850'}`}>{selectedWordMetadata.percentage}٪</span> از کل سهم کلمات لیست سفید کلیدی می‌باشد. این کلمه در <span className={`font-bold ${isDarkMode ? 'text-indigo-400' : 'text-[#0057D9]'}`}>{selectedWordMetadata.chatIndices.length} گفتگو</span> به کار رفته است.
-                      </p>
-
-                      {/* Deduped Chat ID List Panel requested by user */}
-                      <div className={`mt-4 pt-3.5 border-t border-dashed flex flex-col gap-2 ${isDarkMode ? 'border-slate-800/80' : 'border-slate-200'}`}>
-                        <div className="flex items-center justify-between">
-                          <span className={`text-[11px] font-bold ${isDarkMode ? 'text-indigo-400' : 'text-[#0057D9]'}`}>
-                            شناسه‌های گفتگو مرتبط یکتا ({selectedWordUniqueChatIds.length} چت بدون تکرار):
-                          </span>
-                          {selectedWordUniqueChatIds.length > 0 && (
-                            <button
-                              onClick={() => triggerCopy(selectedWordUniqueChatIds.join(', '), 'chatids')}
-                              className={`text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors ${isDarkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-[#0057D9]'}`}
-                            >
-                              {copiedState === 'chatids' ? 'کپی شد!' : 'کپی شناسه‌ها'}
-                            </button>
-                          )}
-                        </div>
-                        <div className={`p-2 rounded-lg border max-h-24 overflow-y-auto pr-1 flex flex-wrap gap-1.5 ${isDarkMode ? 'bg-slate-950 border-slate-900/60' : 'bg-white border-slate-200/85'}`}>
-                          {selectedWordUniqueChatIds.length === 0 ? (
-                            <span className={`text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>هیچ شناسه‌ی گفتگوی معتبری یافت نشد.</span>
-                          ) : (
-                            selectedWordUniqueChatIds.map((cid, i) => (
-                              <span
-                                key={i}
-                                className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold ${
-                                  isDarkMode
-                                    ? 'bg-slate-900 border-slate-800 text-indigo-300'
-                                    : 'bg-indigo-50/50 border-indigo-100 text-[#0057D9]'
-                                }`}
-                              >
-                                {cid}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2 pt-2">
-                      <span className={`text-[10px] border px-2.5 py-1 rounded font-mono font-medium ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700/60' : 'bg-slate-200/50 text-slate-700 border-slate-300/60'}`}>
-                        تکرار: {selectedWordMetadata.value}
-                      </span>
-                      <span className={`text-[10px] border px-2.5 py-1 rounded font-mono font-medium ${isDarkMode ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/25' : 'bg-indigo-50 text-[#0057D9] border-indigo-100'}`}>
-                        سهم: {selectedWordMetadata.percentage}٪
-                      </span>
-                      <span className={`text-[10px] border px-2.5 py-1 rounded font-mono font-medium ${isDarkMode ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
-                        تعداد چت: {selectedWordMetadata.chatIndices.length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="md:col-span-4">
-                  <pre dir="ltr" className={`p-3.5 rounded-lg text-[10px] font-mono h-[300px] overflow-auto select-all border ${isDarkMode ? 'bg-slate-950 text-emerald-400 border-slate-800/80' : 'bg-slate-900 text-emerald-400 border-slate-800'}`}>
-                    {JSON.stringify({
-                      ...selectedWordMetadata,
-                      uniqueChatIds: selectedWordUniqueChatIds
-                    }, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            ) : (
-              <div className={`text-center py-6 text-xs border border-dashed rounded-lg ${isDarkMode ? 'text-slate-500 border-slate-800' : 'text-slate-400 border-slate-200'}`}>
-                هیچ کلمه‌ای انتخاب نشده است. برای دریافت پاسخ زنده و خروجی ساختاریافته‌ی API، روی کلمات داخل ابر کلیک کنید.
-              </div>
-            )}
-          </div>
         </section>
 
         {/* BOTTOM PANEL 1: CSV FILE UPLOAD & FULL DISPLAY */}
@@ -1187,21 +988,36 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Text Column Selector */}
-              {csvHeaders.length > 0 && (
-                <div className={`flex items-center gap-2 border px-3 py-1.5 rounded-lg ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                  <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>ستون متن گفتگو:</span>
-                  <select
-                    value={selectedTextColumn}
-                    onChange={(e) => setSelectedTextColumn(e.target.value)}
-                    className={`text-xs font-bold outline-none cursor-pointer border-none bg-transparent ${isDarkMode ? 'text-indigo-400' : 'text-[#0057D9]'}`}
-                  >
-                    {csvHeaders.map(header => (
-                      <option key={header} value={header} className={isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'}>{header}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {/* Actions container: Column selector & Sample data restorer */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                {csvHeaders.length > 0 && (
+                  <div className={`flex items-center gap-2 border px-3 py-1.5 rounded-lg ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                    <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>ستون متن گفتگو:</span>
+                    <select
+                      value={selectedTextColumn}
+                      onChange={(e) => setSelectedTextColumn(e.target.value)}
+                      className={`text-xs font-bold outline-none cursor-pointer border-none bg-transparent ${isDarkMode ? 'text-indigo-400' : 'text-[#0057D9]'}`}
+                    >
+                      {csvHeaders.map(header => (
+                        <option key={header} value={header} className={isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'}>{header}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <button 
+                  onClick={() => setCsvRawText(DEFAULT_CSV_CONTENT)} 
+                  className={`font-bold text-xs px-3.5 py-2 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700/80 shadow-sm' 
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-xs'
+                  }`}
+                  title="بازنشانی اطلاعات به چت‌های نمونه پیش‌فرض"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-[#0057D9]" />
+                  <span>بارگذاری گفتگوهای نمونه</span>
+                </button>
+              </div>
             </div>
 
             {/* Drag & Drop File Zone */}
@@ -1384,7 +1200,6 @@ export default function App() {
 
       {/* FOOTER */}
       <footer className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-6 border-t flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium w-full transition-colors duration-300 ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'}`}>
-        <span>طراحی شده با استانداردهای هندسی متعادل (Geometric Balance) و فونت خوانای وزیرمتن برای بهبود تجربه مشتریان فارسی‌زبان</span>
         <span>© {new Date().getFullYear()} سیستم تحلیل‌گر ابرکلمات بازخورد مشتریان</span>
       </footer>
     </div>
