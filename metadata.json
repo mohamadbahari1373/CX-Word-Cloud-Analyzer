@@ -1,0 +1,6 @@
+{
+  "name": "CX Word Cloud Analyzer",
+  "description": "ابزار تخصصی تحلیل تجربه مشتری، ساخت ابر کلمات و استخراج بینش از چت‌ها و گفتگوها",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
