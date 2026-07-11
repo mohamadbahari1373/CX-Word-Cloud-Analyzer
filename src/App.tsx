@@ -103,6 +103,44 @@ const DEFAULT_WHITELIST = [
   { id: 'w8', word: 'پیگیری', createdAt: Date.now() - 100000 },
 ];
 
+const DEFAULT_STOP_WORDS = [
+  'و', 'در', 'به', 'از', 'که', 'این', 'با', 'برای', 'هم', 'تا', 'رو', 'را', 'یک', 'است', 'هست', 
+  'شد', 'بود', 'کند', 'دارد', 'کرد', 'میکند', 'شده', 'های', 'ام', 'ای', 'کی', 'چه', 'آیا', 'من', 
+  'تو', 'ما', 'شما', 'آنها', 'او', 'کار', 'مورد', 'روی', 'بخش', 'خود', 'دیگر', 'صفحه', 'ممنون', 
+  'سلام', 'لطفا', 'تیکت', 'سلام،', 'پشتیبانی', 'مرسی', 'تشکر', 'میکنم', 'کنند', 'باشد', 'باشه', 
+  'کردن', 'شدن', 'دارم', 'داری', 'داریم', 'دارید', 'دارند', 'بودم', 'بودی', 'بودیم', 'بودید', 
+  'بودند', 'هستم', 'هستی', 'هستیم', 'هستید', 'هستند', 'نیست', 'نیستم', 'نیستی', 'نیستیم', 'نیستید', 
+  'نیستند', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه', 'ده', 'خیلی', 'کمی', 'بسیار', 
+  'زیاد', 'کم', 'بیشتر', 'کمتر', 'خوب', 'بد', 'عالی', 'افتضاح', 'متوسط', 'بابت', 'توی', 'روی', 'زیر',
+  'بین', 'پیش', 'پس', 'بعد', 'قبل', 'درباره', 'مبنی', 'جهت', 'انجام', 'ارائه', 'داشتن', 'خواستن',
+  'توانستن', 'آمدن', 'رفتن', 'دادن', 'گرفتن', 'زدن', 'دیدن', 'گفتن', 'شنیدن', 'نوشتن', 'خواندن',
+  'چون', 'چرا', 'چگونه', 'چطور', 'چیزی', 'چیز', 'کس', 'کسی', 'همه', 'هیچ', 'هر', 'هیچکس', 'هرکس',
+  'کجا', 'کدام', 'کدوم', 'الان', 'حالا', 'الآن', 'دیروز', 'امروز', 'فردا', 'شب', 'روز', 'ساعت',
+  'یا', 'اما', 'ولی', 'بلکه', 'اگر', 'اگه', 'مگر', 'مگه', 'زیرا', 'چراکه', 'بنابراین', 'لذا',
+  'the', 'and', 'to', 'of', 'in', 'is', 'that', 'it', 'for', 'on', 'with', 'as', 'at', 'by', 'an', 'be', 'this', 'are', 'from',
+  'یا', 'با', 'تا', 'شما', 'آن', 'آنها', 'وی', 'او', 'ما', 'من', 'تو', 'ایشان', 'جناب', 'آقا', 'خانم',
+  'درباره', 'نسبت', 'طبق', 'براساس', 'بر', 'علیه', 'بدون', 'مثل', 'مانند', 'همچون', 'همانند',
+  'چند', 'خیلی', 'بسیار', 'کمی', 'اندکی', 'زیادی', 'بیش', 'کم', 'بزرگ', 'کوچک', 'جدید', 'قدیم',
+  'سلام', 'احترام', 'پشتیبان', 'خسته', 'نباشید', 'روزتون', 'وقتتون', 'بخیر', 'سلام،', 'ممنون،'
+];
+
+// Helper to extract Chat/Ticket ID from row data
+const getChatId = (row: ChatRow): string => {
+  const keys = Object.keys(row.data);
+  const possibleKeys = [
+    'شناسه تیکت', 'تیکت', 'شناسه چت', 'شناسه گفتگو', 'چت آی دی', 'چت ایدی', 'چت آی‌دی',
+    'ticket_id', 'ticket id', 'chat_id', 'chat id', 'id', 'identifier'
+  ];
+  
+  for (const pk of possibleKeys) {
+    const foundKey = keys.find(k => k.toLowerCase().trim() === pk.toLowerCase() || k.toLowerCase().includes(pk.toLowerCase()));
+    if (foundKey && row.data[foundKey]) {
+      return row.data[foundKey].trim();
+    }
+  }
+  return row.id;
+};
+
 export default function App() {
   // State for CSV Data
   const [csvRawText, setCsvRawText] = useState<string>(DEFAULT_CSV_CONTENT);
@@ -122,6 +160,30 @@ export default function App() {
     }
     return DEFAULT_WHITELIST_GROUPS;
   });
+
+  // State for customizable Stop Words
+  const [stopWords, setStopWords] = useState<string[]>(() => {
+    const saved = localStorage.getItem('cx_stop_words');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error reading saved stop words:", e);
+      }
+    }
+    return DEFAULT_STOP_WORDS;
+  });
+
+  const [stopWordsInput, setStopWordsInput] = useState<string>('');
+  const [stopWordsSearch, setStopWordsSearch] = useState<string>('');
+
+  useEffect(() => {
+    localStorage.setItem('cx_stop_words', JSON.stringify(stopWords));
+  }, [stopWords]);
+
+  const stopWordsSet = useMemo(() => {
+    return new Set(stopWords.map(w => w.trim().toLowerCase()).filter(Boolean));
+  }, [stopWords]);
 
   const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
     const saved = localStorage.getItem('cx_whitelist_groups');
@@ -147,6 +209,17 @@ export default function App() {
   // Interaction States
   const [selectedWordMetadata, setSelectedWordMetadata] = useState<WordMetadata | null>(null);
   const [copiedState, setCopiedState] = useState<string | null>(null);
+
+  // Custom Confirmation Dialog states (bypasses sandboxed iframe allow-modals limits)
+  const [deleteConfirmState, setDeleteConfirmState] = useState<{
+    type: 'group' | 'word' | 'reset';
+    groupId: string;
+    wordId?: string;
+    groupName: string;
+    wordText?: string;
+  } | null>(null);
+
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -319,21 +392,28 @@ export default function App() {
 
   const handleDeleteGroup = (id: string, name: string) => {
     if (whitelistGroups.length <= 1) {
-      alert("حداقل باید یک لیست سفید وجود داشته باشد.");
+      setAlertMessage("حداقل باید یک لیست سفید فعال وجود داشته باشد تا فرآیند پردازش و فیلترگذاری کلمات به درستی انجام شود.");
       return;
     }
-    if (window.confirm(`آیا مطمئن هستید که می‌خواهید لیست «${name}» را به همراه تمام کلمات آن حذف کنید؟`)) {
-      setWhitelistGroups(prev => {
-        const filtered = prev.filter(g => g.id !== id);
-        if (selectedGroupId === id && filtered.length > 0) {
-          setSelectedGroupId(filtered[0].id);
-        }
-        return filtered;
-      });
-      if (selectedWordMetadata) {
-        setSelectedWordMetadata(null);
+    setDeleteConfirmState({
+      type: 'group',
+      groupId: id,
+      groupName: name
+    });
+  };
+
+  const handleConfirmDeleteGroup = (id: string) => {
+    setWhitelistGroups(prev => {
+      const filtered = prev.filter(g => g.id !== id);
+      if (selectedGroupId === id && filtered.length > 0) {
+        setSelectedGroupId(filtered[0].id);
       }
+      return filtered;
+    });
+    if (selectedWordMetadata) {
+      setSelectedWordMetadata(null);
     }
+    setDeleteConfirmState(null);
   };
 
   const handleToggleGroupActive = (id: string) => {
@@ -383,6 +463,20 @@ export default function App() {
   };
 
   const handleRemoveWordFromGroup = (groupId: string, wordId: string) => {
+    const group = whitelistGroups.find(g => g.id === groupId);
+    const wordObj = group?.words.find(w => w.id === wordId);
+    if (!group || !wordObj) return;
+
+    setDeleteConfirmState({
+      type: 'word',
+      groupId: groupId,
+      wordId: wordId,
+      groupName: group.name,
+      wordText: wordObj.word
+    });
+  };
+
+  const handleConfirmRemoveWord = (groupId: string, wordId: string) => {
     setWhitelistGroups(prev => prev.map(g => {
       if (g.id === groupId) {
         return {
@@ -395,24 +489,67 @@ export default function App() {
     if (selectedWordMetadata) {
       setSelectedWordMetadata(null);
     }
+    setDeleteConfirmState(null);
   };
 
   const handleResetGroups = () => {
-    if (window.confirm("آیا مایل به بازنشانی گروه‌ها و کلمات به حالت پیش‌فرض سیستم هستید؟")) {
-      setWhitelistGroups(DEFAULT_WHITELIST_GROUPS);
-      setSelectedGroupId('g1');
-      setSelectedWordMetadata(null);
-    }
+    setDeleteConfirmState({
+      type: 'reset',
+      groupId: '',
+      groupName: ''
+    });
   };
+
+  const handleConfirmReset = () => {
+    setWhitelistGroups(DEFAULT_WHITELIST_GROUPS);
+    setSelectedGroupId('g1');
+    setSelectedWordMetadata(null);
+    setDeleteConfirmState(null);
+  };
+
+  // Get currently selected whitelist group
+  const selectedGroup = useMemo<WhitelistGroup | undefined>(() => {
+    return whitelistGroups.find(g => g.id === selectedGroupId) || whitelistGroups[0];
+  }, [whitelistGroups, selectedGroupId]);
+
+  // Find chats containing at least one word from the selected whitelist group
+  const chatsMatchingSelectedGroup = useMemo<ChatRow[]>(() => {
+    if (!selectedGroup) return [];
+    const groupWords = selectedGroup.words.map(w => w.word.trim().toLowerCase()).filter(Boolean);
+    if (groupWords.length === 0) return [];
+
+    const rawMatches = chatRows.filter(row => {
+      const text = (row.text || '').toLowerCase();
+      return groupWords.some(word => text.includes(word));
+    });
+
+    // Deduplicate by Chat ID to prevent displaying duplicate chat cards
+    const seenChatIds = new Set<string>();
+    const uniqueMatches: ChatRow[] = [];
+
+    rawMatches.forEach(row => {
+      const cid = getChatId(row);
+      if (!seenChatIds.has(cid)) {
+        seenChatIds.add(cid);
+        uniqueMatches.push(row);
+      }
+    });
+
+    return uniqueMatches;
+  }, [chatRows, selectedGroup]);
+
+  // Legacy PERSIAN_STOP_WORDS removed to use customizable stopWordsSet state instead.
 
   // Core CX Analysis Engine
   const analysisResult = useMemo<AnalysisResult>(() => {
     const wordFrequencies: Record<string, number> = {};
     const wordDetails: Record<string, WordMetadata> = {};
-    let matchedChatsCount = 0;
+    let matchedChatsCount = chatsMatchingSelectedGroup.length;
+
+    const groupWords = selectedGroup ? selectedGroup.words : [];
 
     // Initialize counts for each whitelist word
-    whitelist.forEach(item => {
+    groupWords.forEach(item => {
       const cleanWord = item.word.trim();
       if (cleanWord) {
         wordFrequencies[cleanWord] = 0;
@@ -428,29 +565,22 @@ export default function App() {
     // Match keywords in chats
     chatRows.forEach(row => {
       const chatText = row.text || '';
-      let isMatched = false;
 
-      whitelist.forEach(item => {
+      groupWords.forEach(item => {
         const cleanWord = item.word.trim();
         if (!cleanWord) return;
 
         // Perform substring check
-        // Using a regex to match the exact word or substring
         const escapedWord = cleanWord.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         const regex = new RegExp(escapedWord, 'gi');
         const occurrences = (chatText.match(regex) || []).length;
 
         if (occurrences > 0) {
-          isMatched = true;
           wordFrequencies[cleanWord] += occurrences;
           wordDetails[cleanWord].value += occurrences;
           wordDetails[cleanWord].chatIndices.push(row.id);
         }
       });
-
-      if (isMatched) {
-        matchedChatsCount++;
-      }
     });
 
     // Calculate total count of Whitelist matches to get percentage weight
@@ -470,14 +600,72 @@ export default function App() {
       wordFrequencies,
       wordDetails
     };
-  }, [chatRows, whitelist]);
+  }, [chatRows, selectedGroup, chatsMatchingSelectedGroup]);
 
   // Synchronize JSON mode
-  // This JSON array represents the raw JSON output list of words matching the bidirectional API constraint
+  // Generates the word cloud from ALL words in the chats related to the selected whitelist group, excluding stop words
   const wordCloudDataArray = useMemo<WordMetadata[]>(() => {
-    // Generate from CSV analytical engine if not manually typing custom JSON
-    return (Object.values(analysisResult.wordDetails) as WordMetadata[]).filter(w => w.value > 0);
-  }, [analysisResult]);
+    if (chatsMatchingSelectedGroup.length === 0) {
+      return [];
+    }
+
+    const freqMap: Record<string, { value: number; chatIndices: string[] }> = {};
+
+    chatsMatchingSelectedGroup.forEach(row => {
+      const text = row.text || '';
+      
+      // Keep only Persian letters, English letters, and numbers. Replace all others with space.
+      const cleanText = text.replace(/[^\u0600-\u06FF\uFB8A\u067E\u0686\u06AF\u200C\u200D\w\s]/g, ' ');
+      const rawWords = cleanText.split(/\s+/);
+      
+      rawWords.forEach(rawWord => {
+        let word = rawWord.trim();
+        word = word.replace(/[\u060C\u061F]/g, ''); // strip remaining Persian punctuation
+        
+        if (word.length >= 2) {
+          const lowerWord = word.toLowerCase();
+          
+          // Whitelist words of the SELECTED group are ALWAYS preserved.
+          const isSelectedGroupWord = selectedGroup?.words.some(
+            w => w.word.trim().toLowerCase() === lowerWord
+          );
+          
+          if (isSelectedGroupWord || !stopWordsSet.has(lowerWord)) {
+            if (!freqMap[word]) {
+              freqMap[word] = { value: 0, chatIndices: [] };
+            }
+            freqMap[word].value += 1;
+            if (!freqMap[word].chatIndices.includes(row.id)) {
+              freqMap[word].chatIndices.push(row.id);
+            }
+          }
+        }
+      });
+    });
+
+    // Transform freqMap into WordMetadata objects
+    const candidates = Object.entries(freqMap).map(([text, data]) => ({
+      text,
+      value: data.value,
+      percentage: 0,
+      chatIndices: data.chatIndices
+    }));
+
+    // Sort by frequency descending and limit to top 50
+    const sortedCandidates = candidates
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 50);
+
+    const totalOccurrences = sortedCandidates.reduce((sum, item) => sum + item.value, 0);
+
+    sortedCandidates.forEach(item => {
+      item.percentage = totalOccurrences > 0
+        ? Math.round((item.value / totalOccurrences) * 100)
+        : 0;
+    });
+
+    return sortedCandidates;
+  }, [chatsMatchingSelectedGroup, selectedGroup, stopWordsSet]);
 
   // Synchronize the textarea when analysis values change so JSON mode has latest
   useEffect(() => {
@@ -535,23 +723,6 @@ export default function App() {
     return wordCloudDataArray;
   }, [isJsonMode, customJsonArray, wordCloudDataArray]);
 
-  // Helper to extract Chat/Ticket ID from row data
-  const getChatId = (row: ChatRow): string => {
-    const keys = Object.keys(row.data);
-    const possibleKeys = [
-      'شناسه تیکت', 'تیکت', 'شناسه چت', 'شناسه گفتگو', 'چت آی دی', 'چت ایدی', 'چت آی‌دی',
-      'ticket_id', 'ticket id', 'chat_id', 'chat id', 'id', 'identifier'
-    ];
-    
-    for (const pk of possibleKeys) {
-      const foundKey = keys.find(k => k.toLowerCase().trim() === pk.toLowerCase() || k.toLowerCase().includes(pk.toLowerCase()));
-      if (foundKey && row.data[foundKey]) {
-        return row.data[foundKey].trim();
-      }
-    }
-    return row.id;
-  };
-
   // Extract and deduplicate Chat IDs for the currently selected word
   const selectedWordUniqueChatIds = useMemo(() => {
     if (!selectedWordMetadata) return [];
@@ -567,41 +738,30 @@ export default function App() {
 
   // Filtered chats lists
   const matchedChatsList = useMemo(() => {
-    const rawMatches = chatRows.filter(row => {
-      const text = row.text || '';
-      return whitelist.some(item => {
-        const word = item.word.trim();
-        return word && text.toLowerCase().includes(word.toLowerCase());
-      });
-    });
-
-    // Deduplicate by Chat ID to prevent displaying duplicate chat cards
-    const seenChatIds = new Set<string>();
-    const uniqueMatches: ChatRow[] = [];
-    
-    rawMatches.forEach(row => {
-      const cid = getChatId(row);
-      if (!seenChatIds.has(cid)) {
-        seenChatIds.add(cid);
-        uniqueMatches.push(row);
-      }
-    });
-
-    return uniqueMatches;
-  }, [chatRows, whitelist]);
+    return chatsMatchingSelectedGroup;
+  }, [chatsMatchingSelectedGroup]);
 
   // Helper to highlight words in chat text
   const highlightMatchedWords = (text: string) => {
     if (!text) return '';
     let highlighted = text;
     
-    // Sort whitelist words by length descending to avoid nested replacement issues
-    const sortedWords = [...whitelist]
-      .map(w => w.word.trim())
+    // Use selected group words to highlight
+    const groupWords = selectedGroup ? selectedGroup.words.map(w => w.word.trim()) : [];
+    
+    // Also highlight the currently clicked word from the word cloud if any
+    if (selectedWordMetadata && !groupWords.some(w => w.toLowerCase() === selectedWordMetadata.text.toLowerCase())) {
+      groupWords.push(selectedWordMetadata.text);
+    }
+
+    // Sort by length descending to avoid nested replacement issues
+    const sortedWords = [...groupWords]
       .filter(w => w.length > 0)
       .sort((a, b) => b.length - a.length);
 
-    if (sortedWords.length === 0) return text;
+    if (sortedWords.length === 0) {
+      return <div className="leading-relaxed text-sm" style={{ direction: 'rtl', textAlign: 'right' }}>{text}</div>;
+    }
 
     // Build a unified regex to replace matches safely
     // To avoid HTML corruption during consecutive replacements, we tokenise first
@@ -616,7 +776,7 @@ export default function App() {
         tokens.push({
           id: tokenId,
           original: match,
-          replacement: `<span class="bg-[#0057D9]/10 text-[#0057D9] font-semibold px-1.5 py-0.5 rounded border border-[#0057D9]/20 hover:bg-[#0057D9]/20 transition-all cursor-pointer" title="کلمه لیست سفید">${match}</span>`
+          replacement: `<span class="bg-[#0057D9]/10 text-[#0057D9] font-semibold px-1.5 py-0.5 rounded border border-[#0057D9]/20 hover:bg-[#0057D9]/20 transition-all cursor-pointer" title="کلمه کلیدی">${match}</span>`
         });
         return tokenId;
       });
@@ -758,8 +918,8 @@ export default function App() {
               <Tag className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">کلمات لیست سفید (فعال)</p>
-              <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{whitelist.length} کلمه</h3>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">کلمات لیست سفید منتخب</p>
+              <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{selectedGroup ? selectedGroup.words.length : 0} کلمه</h3>
             </div>
           </div>
 
@@ -768,7 +928,7 @@ export default function App() {
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">کل تکرار کلمات لیست سفید</p>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">کل تکرار کلمات لیست منتخب</p>
               <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
                 {(Object.values(analysisResult.wordFrequencies) as number[]).reduce((sum, val) => sum + val, 0)} مرتبه
               </h3>
@@ -938,6 +1098,156 @@ export default function App() {
             })()}
           </div>
 
+          {/* STOP WORDS MANAGEMENT PANEL */}
+          <div id="stop-words-panel" className={`rounded-xl border shadow-sm p-5 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
+            <div className={`flex items-center justify-between pb-3 border-b mb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-rose-500" />
+                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>مدیریت کلمات استاپ (Stop Words)</h3>
+              </div>
+              <button
+                onClick={() => {
+                  if (confirm("آیا مایلید لیست کلمات استاپ را به کلمات پیش‌فرض بازیابی کنید؟ کلمات افزوده شده شما پاک خواهند شد.")) {
+                    setStopWords(DEFAULT_STOP_WORDS);
+                  }
+                }}
+                className={`text-[10px] flex items-center gap-1 font-bold px-2 py-1 rounded transition-colors cursor-pointer ${
+                  isDarkMode 
+                    ? 'bg-slate-850 hover:bg-slate-800 text-slate-300 border-slate-800' 
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                }`}
+                title="بازیابی کلمات پیش‌فرض"
+              >
+                <RotateCcw className="w-3 h-3 text-[#0057D9]" />
+                <span>بازنشانی پیش‌فرض</span>
+              </button>
+            </div>
+
+            <p className={`text-[11px] mb-3 leading-relaxed font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              کلماتی که مایل هستید در محاسبات ابرکلمات نهایی نشان داده نشوند (مانند حروف ربط و اضافه) را در این بخش مدیریت کنید. با افزودن یا حذف کلمات، تغییرات بلافاصله روی ابرکلمات نهایی اعمال می‌شود.
+            </p>
+
+            {/* Input to add new stop words */}
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={stopWordsInput}
+                onChange={(e) => setStopWordsInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const trimmed = stopWordsInput.trim();
+                    if (trimmed) {
+                      const wordsToAdd = trimmed.split(/[,،\s]+/).filter(Boolean);
+                      setStopWords(prev => {
+                        const next = [...prev];
+                        wordsToAdd.forEach(w => {
+                          if (!next.includes(w.toLowerCase())) {
+                            next.push(w.toLowerCase());
+                          }
+                        });
+                        return next;
+                      });
+                      setStopWordsInput('');
+                    }
+                  }
+                }}
+                placeholder="کلمه استاپ جدید (با ویرگول یا فاصله جدا کنید)..."
+                className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-rose-500 outline-none border transition-all font-medium placeholder:text-slate-500 ${
+                  isDarkMode 
+                    ? 'bg-slate-950 border-slate-800 text-slate-100 focus:border-rose-500/50' 
+                    : 'bg-slate-50 border-slate-200 text-slate-850 focus:border-rose-500/50'
+                }`}
+              />
+              <button
+                onClick={() => {
+                  const trimmed = stopWordsInput.trim();
+                  if (trimmed) {
+                    const wordsToAdd = trimmed.split(/[,،\s]+/).filter(Boolean);
+                    setStopWords(prev => {
+                      const next = [...prev];
+                      wordsToAdd.forEach(w => {
+                        if (!next.includes(w.toLowerCase())) {
+                          next.push(w.toLowerCase());
+                        }
+                      });
+                      return next;
+                    });
+                    setStopWordsInput('');
+                  }
+                }}
+                className="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                title="افزودن کلمه استاپ"
+              >
+                <Plus className="w-4 h-4" />
+                <span>افزودن</span>
+              </button>
+            </div>
+
+            {/* Quick search & Filter inside Stop Words panel */}
+            <div className="mb-2 flex items-center gap-1.5">
+              <input
+                type="text"
+                value={stopWordsSearch}
+                onChange={(e) => setStopWordsSearch(e.target.value)}
+                placeholder="جستجو در لیست کلمات استاپ..."
+                className={`w-full text-[11px] px-2.5 py-1.5 rounded-md outline-none border transition-all font-medium placeholder:text-slate-500 ${
+                  isDarkMode 
+                    ? 'bg-slate-950 border-slate-800 text-slate-300 focus:border-rose-500/50' 
+                    : 'bg-slate-50 border-slate-200 text-slate-600 focus:border-rose-500/50'
+                }`}
+              />
+              {stopWordsSearch && (
+                <button 
+                  onClick={() => setStopWordsSearch('')}
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer text-xs shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Stop Words Badges Container */}
+            <div className={`flex-grow max-h-[160px] overflow-y-auto pr-1 rounded-lg p-2.5 border ${isDarkMode ? 'bg-slate-950 border-slate-800/80' : 'bg-slate-50 border-slate-200/60'}`}>
+              {(() => {
+                const filtered = stopWords.filter(word => 
+                  !stopWordsSearch.trim() || word.toLowerCase().includes(stopWordsSearch.toLowerCase().trim())
+                );
+                
+                if (filtered.length === 0) {
+                  return (
+                    <div className={`text-center py-4 text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {stopWordsSearch ? 'کلمه‌ای یافت نشد.' : 'لیست کلمات استاپ خالی است.'}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex flex-wrap gap-1.5">
+                    {filtered.map((word, idx) => (
+                      <div
+                        key={`${word}-${idx}`}
+                        className={`rounded py-0.5 px-2 flex items-center gap-1.5 border shadow-xs text-xs hover:border-rose-500/40 transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}
+                      >
+                        <span className="font-medium">{word}</span>
+                        <button
+                          onClick={() => {
+                            setStopWords(prev => prev.filter(w => w !== word));
+                          }}
+                          className="text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                          title="حذف کلمه از لیست استاپ"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+              <span>تعداد کل کلمات استاپ: {stopWords.length} کلمه</span>
+            </div>
+          </div>
 
         </section>
 
@@ -1118,7 +1428,8 @@ export default function App() {
                 <div className="grid grid-cols-1 gap-3 max-h-[450px] overflow-y-auto pr-1">
                   {matchedChatsList.map((row, idx) => {
                     // Find which whitelist words are present in this specific row
-                    const containedKeywords = whitelist
+                    const groupWords = selectedGroup ? selectedGroup.words : [];
+                    const containedKeywords = groupWords
                       .map(w => w.word.trim())
                       .filter(w => w.length > 0 && row.text.toLowerCase().includes(w.toLowerCase()));
 
@@ -1192,6 +1503,159 @@ export default function App() {
       <footer className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-6 border-t flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium w-full transition-colors duration-300 ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'}`}>
         <span>© {new Date().getFullYear()} سیستم تحلیل‌گر ابرکلمات بازخورد مشتریان</span>
       </footer>
+
+      {/* CUSTOM CONFIRMATION MODAL OVERLAY (Bypasses sandboxed iframe modal blocks) */}
+      <AnimatePresence>
+        {deleteConfirmState && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirmState(null)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs"
+            />
+            
+            {/* Modal Dialog Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.35 }}
+              className={`relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-2xl transition-colors duration-300 ${
+                isDarkMode 
+                  ? 'bg-slate-900 border-slate-800 text-slate-100' 
+                  : 'bg-white border-slate-200 text-slate-800'
+              }`}
+            >
+              {/* Header Icon & Title */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`p-2 rounded-lg ${
+                  deleteConfirmState.type === 'reset' 
+                    ? 'bg-amber-500/10 text-amber-500' 
+                    : 'bg-rose-500/10 text-rose-500'
+                }`}>
+                  {deleteConfirmState.type === 'reset' ? (
+                    <RotateCcw className="w-5 h-5" />
+                  ) : (
+                    <Trash2 className="w-5 h-5" />
+                  )}
+                </div>
+                <h3 className="text-base font-bold">
+                  {deleteConfirmState.type === 'group' && `حذف لیست سفید`}
+                  {deleteConfirmState.type === 'word' && `حذف کلمه کلیدی`}
+                  {deleteConfirmState.type === 'reset' && `بازنشانی تنظیمات لیست`}
+                </h3>
+              </div>
+
+              {/* Message Content */}
+              <div className={`text-xs leading-relaxed mb-6 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                {deleteConfirmState.type === 'group' && (
+                  <p>
+                    آیا از حذف کامل لیست سفید <strong className="text-rose-500">«{deleteConfirmState.groupName}»</strong> به همراه تمام کلمات داخل آن مطمئن هستید؟ این تغییر بلافاصله بر روی ابرکلمات اعمال خواهد شد و غیرقابل بازگشت است.
+                  </p>
+                )}
+                {deleteConfirmState.type === 'word' && (
+                  <p>
+                    آیا مطمئن هستید که می‌خواهید کلمه کلیدی <strong className="text-rose-500">«{deleteConfirmState.wordText}»</strong> را از لیست <strong className={isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}>«{deleteConfirmState.groupName}»</strong> حذف کنید؟
+                  </p>
+                )}
+                {deleteConfirmState.type === 'reset' && (
+                  <p>
+                    با تایید این گزینه، تمامی لیست‌های ساخته شده توسط شما حذف شده و کلمات پیش‌فرض صرافی‌ها، ارزها و پشتیبانی مجدداً بارگذاری می‌شوند. آیا مایل به ادامه هستید؟
+                  </p>
+                )}
+              </div>
+
+              {/* Dialog Buttons */}
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmState(null)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-slate-850 hover:bg-slate-800 text-slate-300' 
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  انصراف
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (deleteConfirmState.type === 'group') {
+                      handleConfirmDeleteGroup(deleteConfirmState.groupId);
+                    } else if (deleteConfirmState.type === 'word') {
+                      handleConfirmRemoveWord(deleteConfirmState.groupId, deleteConfirmState.wordId!);
+                    } else if (deleteConfirmState.type === 'reset') {
+                      handleConfirmReset();
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold text-white transition-colors cursor-pointer ${
+                    deleteConfirmState.type === 'reset' 
+                      ? 'bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-600/15' 
+                      : 'bg-rose-600 hover:bg-rose-500 shadow-md shadow-rose-600/15'
+                  }`}
+                >
+                  تایید و حذف قطعی
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CUSTOM ALERT MESSAGE DIALOG */}
+      <AnimatePresence>
+        {alertMessage && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAlertMessage(null)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs"
+            />
+            
+            {/* Modal Alert Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className={`relative z-10 w-full max-w-sm rounded-2xl border p-5 shadow-2xl transition-colors duration-300 ${
+                isDarkMode 
+                  ? 'bg-slate-900 border-slate-800 text-slate-100' 
+                  : 'bg-white border-slate-200 text-slate-800'
+              }`}
+            >
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500 shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold leading-tight mt-0.5">اقدام غیرمجاز</h3>
+                  <p className={`text-[11px] leading-relaxed mt-2.5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {alertMessage}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setAlertMessage(null)}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer shadow-md shadow-indigo-600/15"
+                >
+                  متوجه شدم
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
