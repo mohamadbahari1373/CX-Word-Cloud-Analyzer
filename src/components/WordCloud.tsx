@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import ReactWordcloud from 'react-wordcloud';
 import { WordMetadata } from '../types';
 import { Download } from 'lucide-react';
@@ -15,7 +15,7 @@ interface WordCloudProps {
   isDarkMode?: boolean;
 }
 
-export default function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: WordCloudProps) {
+function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: WordCloudProps) {
   // Sort and limit to top 50 words to keep layout clean and readable
   const processedWords = useMemo(() => {
     return [...words]
@@ -241,3 +241,5 @@ export default function WordCloud({ words, onWordClick, selectedWord, isDarkMode
     </div>
   );
 }
+
+export default memo(WordCloud);

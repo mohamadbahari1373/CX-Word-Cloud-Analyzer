@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Upload, 
   Plus, 
@@ -15,6 +15,7 @@ import {
   Code, 
   Copy, 
   RotateCcw, 
+  RefreshCw,
   Sparkles, 
   Check, 
   FileSpreadsheet, 
@@ -197,6 +198,83 @@ export default function App() {
     }
     return 'g1';
   });
+
+  // Applied counterparts for high-performance decoupled word cloud rendering
+  const [appliedStopWords, setAppliedStopWords] = useState<string[]>(() => stopWords);
+  const [appliedWhitelistGroups, setAppliedWhitelistGroups] = useState<WhitelistGroup[]>(() => whitelistGroups);
+  const [appliedSelectedGroupId, setAppliedSelectedGroupId] = useState<string>(() => selectedGroupId);
+
+  const appliedStopWordsSet = useMemo(() => {
+    return new Set(appliedStopWords.map(w => w.trim().toLowerCase()).filter(Boolean));
+  }, [appliedStopWords]);
+
+  const appliedSelectedGroup = useMemo<WhitelistGroup | undefined>(() => {
+    return appliedWhitelistGroups.find(g => g.id === appliedSelectedGroupId) || appliedWhitelistGroups[0];
+  }, [appliedWhitelistGroups, appliedSelectedGroupId]);
+
+  const appliedChatsMatchingSelectedGroup = useMemo<ChatRow[]>(() => {
+    if (!appliedSelectedGroup) return [];
+    const groupWords = appliedSelectedGroup.words.map(w => w.word.trim().toLowerCase()).filter(Boolean);
+    if (groupWords.length === 0) return [];
+
+    const rawMatches = chatRows.filter(row => {
+      const text = (row.text || '').toLowerCase();
+      return groupWords.some(word => text.includes(word));
+    });
+
+    const seenChatIds = new Set<string>();
+    const uniqueMatches: ChatRow[] = [];
+
+    rawMatches.forEach(row => {
+      const cid = getChatId(row);
+      if (!seenChatIds.has(cid)) {
+        seenChatIds.add(cid);
+        uniqueMatches.push(row);
+      }
+    });
+
+    return uniqueMatches;
+  }, [chatRows, appliedSelectedGroup]);
+
+  // Track if there are pending modifications not yet rendered in the word cloud
+  const hasPendingChanges = useMemo(() => {
+    const stopWordsChanged = JSON.stringify(stopWords) !== JSON.stringify(appliedStopWords);
+    const groupsChanged = JSON.stringify(whitelistGroups) !== JSON.stringify(appliedWhitelistGroups);
+    const selectionChanged = selectedGroupId !== appliedSelectedGroupId;
+    return stopWordsChanged || groupsChanged || selectionChanged;
+  }, [stopWords, appliedStopWords, whitelistGroups, appliedWhitelistGroups, selectedGroupId, appliedSelectedGroupId]);
+
+  // Describe the unsaved adjustments for the user banner
+  const pendingChangesSummary = useMemo(() => {
+    const list: string[] = [];
+    
+    const stopWordsDiffCount = Math.abs(stopWords.length - appliedStopWords.length) + 
+      stopWords.filter(w => !appliedStopWords.includes(w)).length;
+    if (stopWordsDiffCount > 0) {
+      list.push(`کلمات استاپ (${stopWordsDiffCount} تغییر)`);
+    }
+
+    const groupsDiff = JSON.stringify(whitelistGroups) !== JSON.stringify(appliedWhitelistGroups);
+    if (groupsDiff) {
+      list.push(`لیست سفید`);
+    }
+
+    if (selectedGroupId !== appliedSelectedGroupId) {
+      const currentGroup = whitelistGroups.find(g => g.id === selectedGroupId);
+      if (currentGroup) {
+        list.push(`تغییر دسته فعال به «${currentGroup.name}»`);
+      }
+    }
+
+    return list;
+  }, [stopWords, appliedStopWords, whitelistGroups, appliedWhitelistGroups, selectedGroupId, appliedSelectedGroupId]);
+
+  // Function to apply configuration state to the active word cloud
+  const handleApplyChanges = () => {
+    setAppliedStopWords(stopWords);
+    setAppliedWhitelistGroups(whitelistGroups);
+    setAppliedSelectedGroupId(selectedGroupId);
+  };
 
   const [newWordInput, setNewWordInput] = useState<string>('');
   const [newGroupNameInput, setNewGroupNameInput] = useState<string>('');
@@ -605,13 +683,13 @@ export default function App() {
   // Synchronize JSON mode
   // Generates the word cloud from ALL words in the chats related to the selected whitelist group, excluding stop words
   const wordCloudDataArray = useMemo<WordMetadata[]>(() => {
-    if (chatsMatchingSelectedGroup.length === 0) {
+    if (appliedChatsMatchingSelectedGroup.length === 0) {
       return [];
     }
 
     const freqMap: Record<string, { value: number; chatIndices: string[] }> = {};
 
-    chatsMatchingSelectedGroup.forEach(row => {
+    appliedChatsMatchingSelectedGroup.forEach(row => {
       const text = row.text || '';
       
       // Keep only Persian letters, English letters, and numbers. Replace all others with space.
@@ -626,11 +704,11 @@ export default function App() {
           const lowerWord = word.toLowerCase();
           
           // Whitelist words of the SELECTED group are ALWAYS preserved.
-          const isSelectedGroupWord = selectedGroup?.words.some(
+          const isSelectedGroupWord = appliedSelectedGroup?.words.some(
             w => w.word.trim().toLowerCase() === lowerWord
           );
           
-          if (isSelectedGroupWord || !stopWordsSet.has(lowerWord)) {
+          if (isSelectedGroupWord || !appliedStopWordsSet.has(lowerWord)) {
             if (!freqMap[word]) {
               freqMap[word] = { value: 0, chatIndices: [] };
             }
@@ -665,7 +743,7 @@ export default function App() {
     });
 
     return sortedCandidates;
-  }, [chatsMatchingSelectedGroup, selectedGroup, stopWordsSet]);
+  }, [appliedChatsMatchingSelectedGroup, appliedSelectedGroup, appliedStopWordsSet]);
 
   // Synchronize the textarea when analysis values change so JSON mode has latest
   useEffect(() => {
@@ -738,8 +816,8 @@ export default function App() {
 
   // Filtered chats lists
   const matchedChatsList = useMemo(() => {
-    return chatsMatchingSelectedGroup;
-  }, [chatsMatchingSelectedGroup]);
+    return appliedChatsMatchingSelectedGroup;
+  }, [appliedChatsMatchingSelectedGroup]);
 
   // Helper to highlight words in chat text
   const highlightMatchedWords = (text: string) => {
@@ -747,7 +825,7 @@ export default function App() {
     let highlighted = text;
     
     // Use selected group words to highlight
-    const groupWords = selectedGroup ? selectedGroup.words.map(w => w.word.trim()) : [];
+    const groupWords = appliedSelectedGroup ? appliedSelectedGroup.words.map(w => w.word.trim()) : [];
     
     // Also highlight the currently clicked word from the word cloud if any
     if (selectedWordMetadata && !groupWords.some(w => w.toLowerCase() === selectedWordMetadata.text.toLowerCase())) {
@@ -835,9 +913,9 @@ export default function App() {
     setTimeout(() => setCopiedState(null), 2000);
   };
 
-  const handleWordSelect = (word: WordMetadata) => {
+  const handleWordSelect = useCallback((word: WordMetadata) => {
     setSelectedWordMetadata(word);
-  };
+  }, []);
 
   return (
     <div className={`min-h-screen pb-16 flex flex-col font-sans select-text transition-colors duration-300 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
@@ -1261,10 +1339,44 @@ export default function App() {
                 <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
                 <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>ابر کلمات محاسباتی و تعاملی بازخوردهای مشتریان</h3>
               </div>
-              <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                رندر بر اساس {isJsonMode ? 'آرایه ویرایشی JSON' : 'تحلیل فایل بارگذاری شده'}
-              </span>
+              
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={handleApplyChanges}
+                  disabled={!hasPendingChanges}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    hasPendingChanges
+                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                  }`}
+                  title="اعمال کلمات جدید و بازسازی ابرکلمات"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${hasPendingChanges ? 'animate-spin' : ''}`} />
+                  <span>بروزرسانی ابرکلمات</span>
+                </button>
+                <span className={`text-[11px] sm:text-xs font-semibold hidden sm:inline ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  رندر بر اساس {isJsonMode ? 'آرایه ویرایشی JSON' : 'تحلیل فایل بارگذاری شده'}
+                </span>
+              </div>
             </div>
+
+            {hasPendingChanges && (
+              <div className="mb-4 p-3 rounded-lg border flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200 animate-pulse">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <div className="text-xs font-medium" style={{ direction: 'rtl', textAlign: 'right' }}>
+                    تغییراتی در <span className="font-bold">{pendingChangesSummary.join(' و ')}</span> ایجاد شده است که هنوز در ابرکلمات رندر نشده‌اند.
+                  </div>
+                </div>
+                <button
+                  onClick={handleApplyChanges}
+                  className="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>اعمال تغییرات و رندر جدید</span>
+                </button>
+              </div>
+            )}
 
             <WordCloud 
               words={activeCloudWords} 
