@@ -31,7 +31,10 @@ import {
   EyeOff,
   Layers,
   Sun,
-  Moon
+  Moon,
+  ChevronDown,
+  ChevronUp,
+  ArrowUpDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChatRow, WhitelistWord, WhitelistGroup, WordMetadata, AnalysisResult } from './types';
@@ -148,6 +151,39 @@ export default function App() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [chatRows, setChatRows] = useState<ChatRow[]>([]);
   const [selectedTextColumn, setSelectedTextColumn] = useState<string>('');
+  
+  // UI and Sorting States
+  const [isFullTableExpanded, setIsFullTableExpanded] = useState<boolean>(false);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [whitelistWordsSortBy, setWhitelistWordsSortBy] = useState<'alphabetical' | 'frequency' | 'date'>('date');
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedChatRows = useMemo(() => {
+    if (!sortColumn) return chatRows;
+    return [...chatRows].sort((a, b) => {
+      const valA = (a.data[sortColumn] || '').toString();
+      const valB = (b.data[sortColumn] || '').toString();
+      
+      const numA = Number(valA);
+      const numB = Number(valB);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return sortDirection === 'asc' ? numA - numB : numB - numA;
+      }
+      
+      return sortDirection === 'asc'
+        ? valA.localeCompare(valB, 'fa', { sensitivity: 'base' })
+        : valB.localeCompare(valA, 'fa', { sensitivity: 'base' });
+    });
+  }, [chatRows, sortColumn, sortDirection]);
   
   // State for Whitelist Groups (multi-list support)
   const [whitelistGroups, setWhitelistGroups] = useState<WhitelistGroup[]>(() => {
@@ -962,6 +998,156 @@ export default function App() {
       {/* CORE WORKSPACE CONTENT */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
         
+        {/* COMPACT FILE UPLOAD SECTION AT THE TOP */}
+        <section className="lg:col-span-12">
+          <div className={`rounded-xl border shadow-xs p-4 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              
+              {/* Left Side: Drag & Drop Zone (Small & Sleek) */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex-grow w-full md:w-auto border border-dashed rounded-lg py-2.5 px-4 flex items-center justify-between cursor-pointer transition-all duration-300 gap-3 ${
+                  isDragging 
+                    ? 'border-[#0057D9] bg-[#0057D9]/10' 
+                    : (isDarkMode ? 'border-slate-800 bg-slate-950/40 hover:border-indigo-500 hover:bg-slate-900/40' : 'border-slate-200 hover:border-[#0057D9] hover:bg-slate-50')
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileInputChange}
+                  accept=".csv"
+                  className="hidden"
+                />
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-[#0057D9] shrink-0 animate-bounce" />
+                  <div className="text-right">
+                    <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>بارگذاری فایل CSV گفتگوها</h4>
+                    <p className={`text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>فایل را اینجا رها کنید یا برای انتخاب کلیک کنید</p>
+                  </div>
+                </div>
+                <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded border hidden sm:inline ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                  تشخیص خودکار ستون گفتگو
+                </span>
+              </div>
+
+              {/* Right Side: Options and Restore Sample Data */}
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto shrink-0 justify-end">
+                {csvHeaders.length > 0 && (
+                  <div className={`flex items-center gap-2 border px-2.5 py-1.5 rounded-lg ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                    <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>ستون متن گفتگو:</span>
+                    <select
+                      value={selectedTextColumn}
+                      onChange={(e) => setSelectedTextColumn(e.target.value)}
+                      className={`text-xs font-bold outline-none cursor-pointer border-none bg-transparent ${isDarkMode ? 'text-indigo-400' : 'text-[#0057D9]'}`}
+                    >
+                      {csvHeaders.map(header => (
+                        <option key={header} value={header} className={isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'}>{header}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <button 
+                  onClick={() => setCsvRawText(DEFAULT_CSV_CONTENT)} 
+                  className={`font-bold text-xs px-3 py-2 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-slate-800 hover:bg-slate-750 text-slate-200 border-slate-700 shadow-sm' 
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-xs'
+                  }`}
+                  title="بارگذاری نمونه چت‌های پیش‌فرض"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-[#0057D9]" />
+                  <span>بارگذاری گفت‌وگوهای نمونه</span>
+                </button>
+              </div>
+
+            </div>
+
+            {/* COLLAPSIBLE FULL DATASET TABLE */}
+            <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-slate-800/60' : 'border-slate-100'}`}>
+              <button
+                onClick={() => setIsFullTableExpanded(!isFullTableExpanded)}
+                className="w-full flex items-center justify-between text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors py-1 cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>نمایش کل محتوای فایل چت ({chatRows.length} ردیف داده بارگذاری شده)</span>
+                </div>
+                <div className="flex items-center gap-1 text-[11px] text-slate-400 font-normal">
+                  <span>{isFullTableExpanded ? 'بستن جدول' : 'مشاهده و مرتب‌سازی جدول'}</span>
+                  {isFullTableExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </div>
+              </button>
+
+              <AnimatePresence>
+                {isFullTableExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden mt-3"
+                  >
+                    <div className={`overflow-x-auto border rounded-lg max-h-56 overflow-y-auto shadow-inner ${isDarkMode ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/50 border-slate-200'}`}>
+                      {chatRows.length === 0 ? (
+                        <div className={`text-center py-8 text-xs ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+                          هیچ داده‌ای بارگذاری نشده است. فایلی آپلود کرده یا روی "بارگذاری گفت‌وگوهای نمونه" کلیک کنید.
+                        </div>
+                      ) : (
+                        <table className="w-full text-right border-collapse text-xs">
+                          <thead>
+                            <tr className={`sticky top-0 font-bold border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-950 text-slate-300 border-slate-800' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                              <th className={`p-2.5 w-12 text-center border-l ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>ردیف</th>
+                              {csvHeaders.map((header) => {
+                                const isSorted = sortColumn === header;
+                                return (
+                                  <th 
+                                    key={header} 
+                                    onClick={() => handleSort(header)}
+                                    className={`p-2.5 font-semibold border-l last:border-l-0 cursor-pointer select-none hover:bg-indigo-500/10 transition-colors ${isDarkMode ? 'border-slate-800' : 'border-slate-200'} ${header === selectedTextColumn ? (isDarkMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-[#0057D9] bg-indigo-50/40') : ''}`}
+                                  >
+                                    <div className="flex items-center justify-between gap-1.5">
+                                      <span>{header}</span>
+                                      <div className="flex items-center gap-0.5 shrink-0">
+                                        <ArrowUpDown className={`w-3 h-3 ${isSorted ? 'text-indigo-500' : 'text-slate-400'}`} />
+                                        {isSorted && (
+                                          <span className="text-[9px] text-indigo-500 font-mono font-bold">
+                                            {sortDirection === 'asc' ? '↑' : '↓'}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </th>
+                                );
+                              })}
+                            </tr>
+                          </thead>
+                          <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800 bg-slate-900/10' : 'divide-slate-100 bg-white'}`}>
+                            {sortedChatRows.map((row, idx) => (
+                              <tr key={row.id} className={`transition-colors ${isDarkMode ? 'hover:bg-indigo-500/10' : 'hover:bg-indigo-50/20'}`}>
+                                <td className={`p-2.5 font-mono text-center border-l ${isDarkMode ? 'text-slate-500 border-slate-800' : 'text-slate-400 border-slate-100'}`}>{idx + 1}</td>
+                                {csvHeaders.map((header) => (
+                                  <td key={header} className={`p-2.5 font-medium border-l last:border-l-0 ${isDarkMode ? 'text-slate-300 border-slate-800' : 'text-slate-600 border-slate-100'} ${header === selectedTextColumn ? (isDarkMode ? 'font-semibold text-slate-100 bg-indigo-500/10' : 'font-semibold text-slate-800 bg-indigo-50/20') : ''}`}>
+                                    {row.data[header]}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+          </div>
+        </section>
 
 
         {/* METRICS & QUICK INSIGHTS BAR */}
@@ -1106,6 +1292,21 @@ export default function App() {
             {(() => {
               const currentGroup = whitelistGroups.find(g => g.id === selectedGroupId) || whitelistGroups[0];
               if (!currentGroup) return null;
+
+              // Sort whitelist words based on selected sorting option
+              const sortedCurrentGroupWords = [...currentGroup.words].sort((a, b) => {
+                if (whitelistWordsSortBy === 'alphabetical') {
+                  return a.word.localeCompare(b.word, 'fa', { sensitivity: 'base' });
+                } else if (whitelistWordsSortBy === 'frequency') {
+                  const freqA = analysisResult.wordFrequencies[a.word] || 0;
+                  const freqB = analysisResult.wordFrequencies[b.word] || 0;
+                  return freqB - freqA; // highest frequency first
+                } else {
+                  // 'date' (default: newest first)
+                  return b.createdAt - a.createdAt;
+                }
+              });
+
               return (
                 <div className={`border-t pt-3 mt-1 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
                   <div className="flex items-center justify-between mb-2">
@@ -1115,7 +1316,7 @@ export default function App() {
                     </span>
                   </div>
 
-                  <div className="flex gap-2 mb-3">
+                  <div className="flex gap-2 mb-2">
                     <input
                       type="text"
                       value={newWordInput}
@@ -1137,15 +1338,51 @@ export default function App() {
                     </button>
                   </div>
 
+                  {/* Sorting Controls for Whitelist Words */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-[10px] font-semibold text-slate-400">ترتیب کلمات:</span>
+                    <button
+                      onClick={() => setWhitelistWordsSortBy('date')}
+                      className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
+                        whitelistWordsSortBy === 'date'
+                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      جدیدترین‌ها
+                    </button>
+                    <button
+                      onClick={() => setWhitelistWordsSortBy('alphabetical')}
+                      className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
+                        whitelistWordsSortBy === 'alphabetical'
+                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      الفبایی
+                    </button>
+                    <button
+                      onClick={() => setWhitelistWordsSortBy('frequency')}
+                      className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
+                        whitelistWordsSortBy === 'frequency'
+                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                      title="نمایش بر اساس فراوانی تکرار کلمه در چت‌ها"
+                    >
+                      تعداد تکرار
+                    </button>
+                  </div>
+
                   {/* Whitelist Badges Container */}
                   <div className={`flex-grow max-h-[160px] overflow-y-auto pr-1 rounded-lg p-2.5 border ${isDarkMode ? 'bg-slate-950 border-slate-800/80' : 'bg-slate-50 border-slate-200/60'}`}>
-                    {currentGroup.words.length === 0 ? (
+                    {sortedCurrentGroupWords.length === 0 ? (
                       <div className={`text-center py-4 text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                         هیچ کلمه‌ای در این لیست قرار ندارد.
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
-                        {currentGroup.words.map((wordObj) => {
+                        {sortedCurrentGroupWords.map((wordObj) => {
                           const frequency = analysisResult.wordFrequencies[wordObj.word] || 0;
                           return (
                             <div
@@ -1386,124 +1623,6 @@ export default function App() {
             />
           </div>
 
-
-        </section>
-
-        {/* BOTTOM PANEL 1: CSV FILE UPLOAD & FULL DISPLAY */}
-        <section className="lg:col-span-12 space-y-6">
-          <div className={`rounded-xl border shadow-sm p-6 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
-            <div className={`flex flex-col md:flex-row md:items-center justify-between pb-4 border-b gap-4 mb-6 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-[#0057D9]/10 border-[#0057D9]/25 text-indigo-400' : 'bg-indigo-50 border-indigo-100 text-[#0057D9]'}`}>
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>۱. بارگذاری و نمایش کامل فایل گفتگوها (CSV)</h3>
-                  <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>فایل چت‌های تیم پشتیبانی خود را بارگذاری کنید</p>
-                </div>
-              </div>
-
-              {/* Actions container: Column selector & Sample data restorer */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                {csvHeaders.length > 0 && (
-                  <div className={`flex items-center gap-2 border px-3 py-1.5 rounded-lg ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                    <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>ستون متن گفتگو:</span>
-                    <select
-                      value={selectedTextColumn}
-                      onChange={(e) => setSelectedTextColumn(e.target.value)}
-                      className={`text-xs font-bold outline-none cursor-pointer border-none bg-transparent ${isDarkMode ? 'text-indigo-400' : 'text-[#0057D9]'}`}
-                    >
-                      {csvHeaders.map(header => (
-                        <option key={header} value={header} className={isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'}>{header}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <button 
-                  onClick={() => setCsvRawText(DEFAULT_CSV_CONTENT)} 
-                  className={`font-bold text-xs px-3.5 py-2 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
-                    isDarkMode 
-                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700/80 shadow-sm' 
-                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-xs'
-                  }`}
-                  title="بازنشانی اطلاعات به چت‌های نمونه پیش‌فرض"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-[#0057D9]" />
-                  <span>بارگذاری گفتگوهای نمونه</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Drag & Drop File Zone */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${
-                isDragging 
-                  ? 'border-[#0057D9] bg-[#0057D9]/10 scale-[0.99]' 
-                  : (isDarkMode ? 'border-slate-800 bg-slate-950/20 hover:border-indigo-500 hover:bg-slate-900/30' : 'border-slate-200 hover:border-[#0057D9] hover:bg-slate-50/50')
-              }`}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileInputChange}
-                accept=".csv"
-                className="hidden"
-              />
-              <Upload className="w-8 h-8 text-[#0057D9] mx-auto mb-3 animate-bounce" />
-              <h4 className={`text-sm font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>فایل CSV گفتگوها را بکشید و رها کنید</h4>
-              <p className={`text-xs mt-1 max-w-md mx-auto leading-relaxed ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                یا اینجا کلیک کنید تا فایل خود را از حافظه سیستم انتخاب نمایید. نرم‌افزار به صورت خودکار ستون حاوی مکالمه را شناسایی خواهد کرد.
-              </p>
-            </div>
-
-            {/* FULL DATASET TABLE */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-bold flex items-center gap-1.5 ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-                  <CheckCircle className="w-4 h-4 text-emerald-500" />
-                  نمایش کل محتوای فایل چت ({chatRows.length} ردیف داده بارگذاری شده)
-                </span>
-              </div>
-
-              <div className={`overflow-x-auto border rounded-lg max-h-72 overflow-y-auto shadow-inner ${isDarkMode ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/50 border-slate-200'}`}>
-                {chatRows.length === 0 ? (
-                  <div className={`text-center py-12 text-xs ${isDarkMode ? 'text-slate-600' : 'text-slate-400'}`}>
-                    هیچ داده‌ای بارگذاری نشده است. فایلی آپلود کرده یا روی "بازنشانی به داده پیش‌فرض" کلیک کنید.
-                  </div>
-                ) : (
-                  <table className="w-full text-right border-collapse text-xs">
-                    <thead>
-                      <tr className={`sticky top-0 font-bold border-b backdrop-blur-md ${isDarkMode ? 'bg-slate-950 text-slate-300 border-slate-800' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                        <th className={`p-3 w-12 text-center border-l ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>ردیف</th>
-                        {csvHeaders.map((header) => (
-                          <th key={header} className={`p-3 font-semibold border-l last:border-l-0 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'} ${header === selectedTextColumn ? (isDarkMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-[#0057D9] bg-indigo-50/40') : ''}`}>
-                            {header}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className={`divide-y ${isDarkMode ? 'divide-slate-800 bg-slate-900/10' : 'divide-slate-100 bg-white'}`}>
-                      {chatRows.map((row, idx) => (
-                        <tr key={row.id} className={`transition-colors ${isDarkMode ? 'hover:bg-indigo-500/10' : 'hover:bg-indigo-50/20'}`}>
-                          <td className={`p-3 font-mono text-center border-l ${isDarkMode ? 'text-slate-500 border-slate-800' : 'text-slate-400 border-slate-100'}`}>{idx + 1}</td>
-                          {csvHeaders.map((header) => (
-                            <td key={header} className={`p-3 font-medium border-l last:border-l-0 ${isDarkMode ? 'text-slate-300 border-slate-800' : 'text-slate-600 border-slate-100'} ${header === selectedTextColumn ? (isDarkMode ? 'font-semibold text-slate-100 bg-indigo-500/10' : 'font-semibold text-slate-800 bg-indigo-50/20') : ''}`}>
-                              {row.data[header]}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          </div>
         </section>
 
         {/* BOTTOM PANEL 2: FILTERED CHATS BASED ON WHITELIST */}
