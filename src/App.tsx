@@ -214,6 +214,7 @@ export default function App() {
   const [stopWordsInput, setStopWordsInput] = useState<string>('');
   const [stopWordsSearch, setStopWordsSearch] = useState<string>('');
   const [activeManagementTab, setActiveManagementTab] = useState<'whitelist' | 'stopWords'>('whitelist');
+  const [isFilteredChatsExpanded, setIsFilteredChatsExpanded] = useState<boolean>(true);
 
   useEffect(() => {
     localStorage.setItem('cx_stop_words', JSON.stringify(stopWords));
@@ -1638,102 +1639,124 @@ export default function App() {
         <section id="filtered-chats-panel" className="lg:col-span-12">
           <div className={`rounded-xl border shadow-sm p-6 transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
             
-            <div className={`flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b gap-4 mb-6 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div 
+              onClick={() => setIsFilteredChatsExpanded(!isFilteredChatsExpanded)}
+              className={`flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b gap-4 cursor-pointer select-none hover:opacity-90 transition-opacity ${isFilteredChatsExpanded ? 'mb-6' : 'mb-0'} ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}
+            >
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-[#0057D9]/10 border-[#0057D9]/25 text-indigo-400' : 'bg-indigo-50 border-indigo-100 text-[#0057D9]'}`}>
                   <Filter className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>۲. مکالمات فیلتر شده بر اساس کلمات کلیدی لیست سفید</h3>
+                  <h3 className={`text-sm font-bold flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                    <span>۲. مکالمات فیلتر شده بر اساس کلمات کلیدی لیست سفید</span>
+                  </h3>
                   <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>فهرست پیام‌هایی که شامل واژه‌های فیلتر شده هستند</p>
                 </div>
               </div>
 
-              <div className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 border ${isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-100 text-emerald-700'}`}>
-                <span>نمایش {matchedChatsList.length} گفتگو از {chatRows.length} گفتگو</span>
+              <div className="flex items-center gap-2.5">
+                <div className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 border ${isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-100 text-emerald-700'}`}>
+                  <span>نمایش {matchedChatsList.length} گفتگو از {chatRows.length} گفتگو</span>
+                </div>
+                <div className={`p-1.5 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                  {isFilteredChatsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
               </div>
             </div>
 
-            <p className={`text-xs mb-4 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              در زیر، تمامی پیام‌هایی که شامل حداقل یکی از واژه‌های تعریف شده در «لیست سفید» شما هستند را مشاهده می‌کنید. برای شفافیت، کلمات تطبیق داده شده با هایلایت <span className={`font-semibold px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-[#0057D9]/10 text-[#0057D9] border-[#0057D9]/15'}`}>آبی اعتماد</span> مشخص گردیده‌اند و گفتگوها بر اساس شناسه چت یکتا فیلتر شده‌اند تا از نمایش رکوردهای تکراری جلوگیری شود.
-            </p>
+            <AnimatePresence initial={false}>
+              {isFilteredChatsExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <p className={`text-xs mb-4 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    در زیر، تمامی پیام‌هایی که شامل حداقل یکی از واژه‌های تعریف شده در «لیست سفید» شما هستند را مشاهده می‌کنید. برای شفافیت، کلمات تطبیق داده شده با هایلایت <span className={`font-semibold px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-[#0057D9]/10 text-[#0057D9] border-[#0057D9]/15'}`}>آبی اعتماد</span> مشخص گردیده‌اند و گفتگوها بر اساس شناسه چت یکتا فیلتر شده‌اند تا از نمایش رکوردهای تکراری جلوگیری شود.
+                  </p>
 
-            {/* FILTERED CARDS GRID */}
-            <div className="space-y-4">
-              {matchedChatsList.length === 0 ? (
-                <div className={`text-center py-12 text-xs border border-dashed rounded-lg ${isDarkMode ? 'text-slate-500 border-slate-800 bg-slate-950/10' : 'text-slate-400 border-slate-200 bg-slate-50'}`}>
-                  هیچ چتی با کلمات کلیدی لیست سفید شما همخوانی ندارد. کلمات لیست سفید جدیدی اضافه کرده یا فایل گفتگوها را بررسی کنید.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 max-h-[450px] overflow-y-auto pr-1">
-                  {matchedChatsList.map((row, idx) => {
-                    // Find which whitelist words are present in this specific row
-                    const groupWords = selectedGroup ? selectedGroup.words : [];
-                    const containedKeywords = groupWords
-                      .map(w => w.word.trim())
-                      .filter(w => w.length > 0 && row.text.toLowerCase().includes(w.toLowerCase()));
-
-                    const chatId = getChatId(row);
-
-                    return (
-                      <div 
-                        key={row.id}
-                        className={`p-4 rounded-lg border transition-all flex flex-col md:flex-row justify-between gap-4 shadow-xs ${
-                          isDarkMode 
-                            ? 'bg-slate-950/40 border-slate-800 hover:border-indigo-500/50 hover:bg-slate-950' 
-                            : 'bg-white border-slate-200 hover:border-[#0057D9]/30 hover:bg-slate-50/20 hover:shadow-md'
-                        }`}
-                      >
-                        <div className="space-y-3 flex-grow">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`w-5 h-5 rounded-full border text-[10px] font-mono flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
-                              {idx + 1}
-                            </span>
-                            <span className={`text-[10px] font-mono flex items-center gap-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              <span>شناسه گفتگو:</span>
-                              <span className={`border px-1.5 py-0.5 rounded font-semibold ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{chatId}</span>
-                            </span>
-                            {row.data['دسته بندی'] && (
-                              <span className={`border text-[10px] px-2 py-0.5 rounded-md font-medium ${isDarkMode ? 'bg-[#0057D9]/15 text-indigo-300 border-[#0057D9]/30' : 'bg-[#0057D9]/5 text-[#0057D9] border-[#0057D9]/15'}`}>
-                                {row.data['دسته بندی']}
-                              </span>
-                            )}
-                          </div>
-                          
-                          {/* Content with highlighter */}
-                          <div className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                            {highlightMatchedWords(row.text)}
-                          </div>
-                        </div>
-
-                        {/* Contained Keywords Tag */}
-                        <div className={`flex flex-row md:flex-col items-start md:items-end gap-1.5 shrink-0 justify-end md:justify-center border-t md:border-t-0 pt-2.5 md:pt-0 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                          <span className="text-[9px] text-slate-400 font-bold block mb-1">کلمات یافت شده:</span>
-                          <div className="flex flex-wrap gap-1 md:justify-end">
-                            {containedKeywords.map((kw, i) => (
-                              <span 
-                                key={i}
-                                onClick={() => {
-                                  const metadata = activeCloudWords.find(w => w.text === kw);
-                                  if (metadata) {
-                                    handleWordSelect(metadata);
-                                    // Scroll to metadata output
-                                    document.getElementById('metadata-output')?.scrollIntoView({ behavior: 'smooth' });
-                                  }
-                                }}
-                                className="bg-[#0057D9] text-white text-[9px] font-bold px-2 py-0.5 rounded hover:scale-105 transition-all cursor-pointer shadow-sm"
-                              >
-                                {kw}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+                  {/* FILTERED CARDS GRID */}
+                  <div className="space-y-4">
+                    {matchedChatsList.length === 0 ? (
+                      <div className={`text-center py-12 text-xs border border-dashed rounded-lg ${isDarkMode ? 'text-slate-500 border-slate-800 bg-slate-950/10' : 'text-slate-400 border-slate-200 bg-slate-50'}`}>
+                        هیچ چتی با کلمات کلیدی لیست سفید شما همخوانی ندارد. کلمات لیست سفید جدیدی اضافه کرده یا فایل گفتگوها را بررسی کنید.
                       </div>
-                    );
-                  })}
-                </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 max-h-[450px] overflow-y-auto pr-1">
+                        {matchedChatsList.map((row, idx) => {
+                          // Find which whitelist words are present in this specific row
+                          const groupWords = selectedGroup ? selectedGroup.words : [];
+                          const containedKeywords = groupWords
+                            .map(w => w.word.trim())
+                            .filter(w => w.length > 0 && row.text.toLowerCase().includes(w.toLowerCase()));
+
+                          const chatId = getChatId(row);
+
+                          return (
+                            <div 
+                              key={row.id}
+                              className={`p-4 rounded-lg border transition-all flex flex-col md:flex-row justify-between gap-4 shadow-xs ${
+                                isDarkMode 
+                                  ? 'bg-slate-950/40 border-slate-800 hover:border-indigo-500/50 hover:bg-slate-950' 
+                                  : 'bg-white border-slate-200 hover:border-[#0057D9]/30 hover:bg-slate-50/20 hover:shadow-md'
+                              }`}
+                            >
+                              <div className="space-y-3 flex-grow">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`w-5 h-5 rounded-full border text-[10px] font-mono flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+                                    {idx + 1}
+                                  </span>
+                                  <span className={`text-[10px] font-mono flex items-center gap-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    <span>شناسه گفتگو:</span>
+                                    <span className={`border px-1.5 py-0.5 rounded font-semibold ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{chatId}</span>
+                                  </span>
+                                  {row.data['دسته بندی'] && (
+                                    <span className={`border text-[10px] px-2 py-0.5 rounded-md font-medium ${isDarkMode ? 'bg-[#0057D9]/15 text-indigo-300 border-[#0057D9]/30' : 'bg-[#0057D9]/5 text-[#0057D9] border-[#0057D9]/15'}`}>
+                                      {row.data['دسته بندی']}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Content with highlighter */}
+                                <div className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                  {highlightMatchedWords(row.text)}
+                                </div>
+                              </div>
+
+                              {/* Contained Keywords Tag */}
+                              <div className={`flex flex-row md:flex-col items-start md:items-end gap-1.5 shrink-0 justify-end md:justify-center border-t md:border-t-0 pt-2.5 md:pt-0 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+                                <span className="text-[9px] text-slate-400 font-bold block mb-1">کلمات یافت شده:</span>
+                                <div className="flex flex-wrap gap-1 md:justify-end">
+                                  {containedKeywords.map((kw, i) => (
+                                    <span 
+                                      key={i}
+                                      onClick={() => {
+                                        const metadata = activeCloudWords.find(w => w.text === kw);
+                                        if (metadata) {
+                                          handleWordSelect(metadata);
+                                          // Scroll to metadata output
+                                          document.getElementById('metadata-output')?.scrollIntoView({ behavior: 'smooth' });
+                                        }
+                                      }}
+                                      className="bg-[#0057D9] text-white text-[9px] font-bold px-2 py-0.5 rounded hover:scale-105 transition-all cursor-pointer shadow-sm"
+                                    >
+                                      {kw}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </div>
         </section>
 
