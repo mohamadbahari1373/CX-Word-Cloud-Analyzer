@@ -24,6 +24,7 @@ export interface WhitelistGroup {
   words: WhitelistWord[];
   isActive: boolean;
   createdAt: number;
+  color?: string;
 }
 
 export interface WordMetadata {
@@ -32,6 +33,7 @@ export interface WordMetadata {
   percentage: number;
   chatIndices: string[]; // IDs of ChatRow containing this word
   groupName?: string; // Optional group name it belongs to
+  groupColor?: string; // Optional color of the group it belongs to
 }
 
 export interface AnalysisResult {

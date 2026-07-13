@@ -44,36 +44,57 @@ function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: Wor
   }), []);
 
   // Customized callbacks for color, tooltip, and interactive clicks
-  const callbacks = useMemo(() => ({
-    getWordColor: (word: any) => {
-      const isSelected = selectedWord?.text === word.text;
-      const ratio = (word.value - minCount) / sizeRange;
+  const callbacks = useMemo(() => {
+    const colorHexMap: Record<string, string> = {
+      indigo: '#6366f1',
+      emerald: '#10b981',
+      amber: '#f59e0b',
+      rose: '#f43f5e',
+      violet: '#8b5cf6',
+      cyan: '#06b6d4',
+    };
 
-      if (isSelected) {
-        return isDarkMode ? '#38BDF8' : '#0057D9'; // Bright highlighting for selected
-      }
+    return {
+      getWordColor: (word: any) => {
+        const isSelected = selectedWord?.text === word.text;
+        const ratio = (word.value - minCount) / sizeRange;
 
-      if (isDarkMode) {
-        if (ratio > 0.75) return '#F8FAFC'; // Slate 50
-        if (ratio > 0.4) return '#7DD3FC';  // Sky 300
-        if (ratio > 0.15) return '#CBD5E1'; // Slate 300
-        return '#64748B';                   // Slate 500
-      } else {
-        if (ratio > 0.75) return '#0F172A'; // Slate 900
-        if (ratio > 0.4) return '#2563EB';  // Blue 600
-        if (ratio > 0.15) return '#475569'; // Slate 600
-        return '#94A3B8';                   // Slate 400
+        if (isSelected) {
+          if (word.groupColor && colorHexMap[word.groupColor]) {
+            return colorHexMap[word.groupColor];
+          }
+          return isDarkMode ? '#38BDF8' : '#0057D9'; // Bright highlighting for selected
+        }
+
+        if (word.groupColor && colorHexMap[word.groupColor]) {
+          return colorHexMap[word.groupColor];
+        }
+
+        if (isDarkMode) {
+          if (ratio > 0.75) return '#F8FAFC'; // Slate 50
+          if (ratio > 0.4) return '#7DD3FC';  // Sky 300
+          if (ratio > 0.15) return '#CBD5E1'; // Slate 300
+          return '#64748B';                   // Slate 500
+        } else {
+          if (ratio > 0.75) return '#0F172A'; // Slate 900
+          if (ratio > 0.4) return '#2563EB';  // Blue 600
+          if (ratio > 0.15) return '#475569'; // Slate 600
+          return '#94A3B8';                   // Slate 400
+        }
+      },
+      getWordTooltip: (word: any) => {
+        const groupInfo = word.groupName ? ` | لیست: ${word.groupName}` : '';
+        return `کلمه: ${word.text} | تعداد تکرار: ${word.value}${groupInfo}`;
+      },
+      onWordClick: (word: any) => {
+        // Find the original WordMetadata reference and trigger callback
+        const matched = words.find(w => w.text === word.text);
+        if (matched) {
+          onWordClick(matched);
+        }
       }
-    },
-    getWordTooltip: (word: any) => `کلمه: ${word.text} | تعداد تکرار: ${word.value}`,
-    onWordClick: (word: any) => {
-      // Find the original WordMetadata reference and trigger callback
-      const matched = words.find(w => w.text === word.text);
-      if (matched) {
-        onWordClick(matched);
-      }
-    }
-  }), [processedWords, selectedWord, isDarkMode, minCount, sizeRange, words, onWordClick]);
+    };
+  }, [processedWords, selectedWord, isDarkMode, minCount, sizeRange, words, onWordClick]);
 
   // Export word cloud SVG to PNG image
   const handleExportPNG = () => {

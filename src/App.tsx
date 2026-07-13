@@ -58,6 +58,7 @@ const DEFAULT_WHITELIST_GROUPS: WhitelistGroup[] = [
     id: 'g1',
     name: 'مسائل عمومی و پشتیبانی',
     isActive: true,
+    color: 'indigo',
     createdAt: Date.now() - 300000,
     words: [
       { id: 'w1_1', word: 'پشتیبانی', createdAt: Date.now() - 800000 },
@@ -74,6 +75,7 @@ const DEFAULT_WHITELIST_GROUPS: WhitelistGroup[] = [
     id: 'g2',
     name: 'لیست ارزها',
     isActive: true,
+    color: 'emerald',
     createdAt: Date.now() - 200000,
     words: [
       { id: 'w2_1', word: 'تتر', createdAt: Date.now() - 150000 },
@@ -86,6 +88,7 @@ const DEFAULT_WHITELIST_GROUPS: WhitelistGroup[] = [
     id: 'g3',
     name: 'لیست صرافی‌ها',
     isActive: true,
+    color: 'amber',
     createdAt: Date.now() - 100000,
     words: [
       { id: 'w3_1', word: 'کوکوین', createdAt: Date.now() - 90000 },
@@ -143,6 +146,112 @@ const getChatId = (row: ChatRow): string => {
     }
   }
   return row.id;
+};
+
+// Preset colors for Whitelist Groups
+export const COLOR_PRESETS = [
+  { id: 'indigo', name: 'نیلی', hex: '#6366f1', bgClass: 'bg-indigo-500', textClass: 'text-indigo-600 dark:text-indigo-400' },
+  { id: 'emerald', name: 'زمردی', hex: '#10b981', bgClass: 'bg-emerald-500', textClass: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'amber', name: 'کهربایی', hex: '#f59e0b', bgClass: 'bg-amber-500', textClass: 'text-amber-600 dark:text-amber-400' },
+  { id: 'rose', name: 'سرخ', hex: '#f43f5e', bgClass: 'bg-rose-500', textClass: 'text-rose-600 dark:text-rose-400' },
+  { id: 'violet', name: 'بنفش', hex: '#8b5cf6', bgClass: 'bg-violet-500', textClass: 'text-violet-600 dark:text-violet-400' },
+  { id: 'cyan', name: 'فیروزه‌ای', hex: '#06b6d4', bgClass: 'bg-cyan-500', textClass: 'text-cyan-600 dark:text-cyan-400' },
+];
+
+export const getGroupColorClasses = (colorId?: string) => {
+  switch (colorId) {
+    case 'emerald':
+      return {
+        bg: 'bg-emerald-500',
+        text: 'text-emerald-600 dark:text-emerald-400',
+        border: 'border-emerald-500',
+        badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+        activeBg: 'bg-emerald-500/10 border-emerald-500/30 dark:bg-emerald-500/15',
+        hoverBg: 'hover:bg-emerald-500/5',
+        textLight: '#059669',
+        textDark: '#34d399',
+        borderPulse: 'focus:border-emerald-500/50',
+        accentBadge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
+        buttonClass: 'bg-emerald-600 hover:bg-emerald-500 text-white',
+        highlightSpan: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-1.5 py-0.5 rounded border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer',
+      };
+    case 'amber':
+      return {
+        bg: 'bg-amber-500',
+        text: 'text-amber-600 dark:text-amber-400',
+        border: 'border-amber-500',
+        badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+        activeBg: 'bg-amber-500/10 border-amber-500/30 dark:bg-amber-500/15',
+        hoverBg: 'hover:bg-amber-500/5',
+        textLight: '#d97706',
+        textDark: '#fbbf24',
+        borderPulse: 'focus:border-amber-500/50',
+        accentBadge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+        buttonClass: 'bg-amber-600 hover:bg-amber-500 text-white',
+        highlightSpan: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold px-1.5 py-0.5 rounded border border-amber-500/20 hover:bg-amber-500/20 transition-all cursor-pointer',
+      };
+    case 'rose':
+      return {
+        bg: 'bg-rose-500',
+        text: 'text-rose-600 dark:text-rose-400',
+        border: 'border-rose-500',
+        badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+        activeBg: 'bg-rose-500/10 border-rose-500/30 dark:bg-rose-500/15',
+        hoverBg: 'hover:bg-rose-500/5',
+        textLight: '#e11d48',
+        textDark: '#f43f5e',
+        borderPulse: 'focus:border-rose-500/50',
+        accentBadge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25',
+        buttonClass: 'bg-rose-600 hover:bg-rose-500 text-white',
+        highlightSpan: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold px-1.5 py-0.5 rounded border border-rose-500/20 hover:bg-rose-500/20 transition-all cursor-pointer',
+      };
+    case 'violet':
+      return {
+        bg: 'bg-violet-500',
+        text: 'text-violet-600 dark:text-violet-400',
+        border: 'border-violet-500',
+        badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
+        activeBg: 'bg-violet-500/10 border-violet-500/30 dark:bg-violet-500/15',
+        hoverBg: 'hover:bg-violet-500/5',
+        textLight: '#7c3aed',
+        textDark: '#a78bfa',
+        borderPulse: 'focus:border-violet-500/50',
+        accentBadge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/25',
+        buttonClass: 'bg-violet-600 hover:bg-violet-500 text-white',
+        highlightSpan: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-semibold px-1.5 py-0.5 rounded border border-violet-500/20 hover:bg-violet-500/20 transition-all cursor-pointer',
+      };
+    case 'cyan':
+      return {
+        bg: 'bg-cyan-500',
+        text: 'text-cyan-600 dark:text-cyan-400',
+        border: 'border-cyan-500',
+        badge: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+        activeBg: 'bg-cyan-500/10 border-cyan-500/30 dark:bg-cyan-500/15',
+        hoverBg: 'hover:bg-cyan-500/5',
+        textLight: '#0891b2',
+        textDark: '#22d3ee',
+        borderPulse: 'focus:border-cyan-500/50',
+        accentBadge: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/25',
+        buttonClass: 'bg-cyan-600 hover:bg-cyan-500 text-white',
+        highlightSpan: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-semibold px-1.5 py-0.5 rounded border border-cyan-500/20 hover:bg-cyan-500/20 transition-all cursor-pointer',
+      };
+    case 'indigo':
+    default:
+      return {
+        bg: 'bg-indigo-500',
+        text: 'text-indigo-600 dark:text-indigo-400',
+        border: 'border-indigo-500',
+        badge: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+        activeBg: 'bg-indigo-500/10 border-indigo-500/30 dark:bg-indigo-500/15',
+        hoverBg: 'hover:bg-indigo-500/5',
+        textLight: '#4f46e5',
+        textDark: '#818cf8',
+        borderPulse: 'focus:border-indigo-500/50',
+        accentBadge: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25',
+        buttonClass: 'bg-indigo-600 hover:bg-indigo-500 text-white',
+        highlightSpan: 'bg-[#0057D9]/10 text-[#0057D9] font-semibold px-1.5 py-0.5 rounded border border-[#0057D9]/20 hover:bg-[#0057D9]/20 transition-all cursor-pointer',
+      };
+  }
 };
 
 export default function App() {
@@ -316,6 +425,7 @@ export default function App() {
 
   const [newWordInput, setNewWordInput] = useState<string>('');
   const [newGroupNameInput, setNewGroupNameInput] = useState<string>('');
+  const [newGroupColor, setNewGroupColor] = useState<string>('indigo');
 
   // State for Bidirectional JSON API sync
   const [isJsonMode, setIsJsonMode] = useState<boolean>(false);
@@ -497,6 +607,7 @@ export default function App() {
       id: `g-${Date.now()}`,
       name: name,
       isActive: true,
+      color: newGroupColor,
       createdAt: Date.now(),
       words: []
     };
@@ -504,6 +615,7 @@ export default function App() {
     setWhitelistGroups(prev => [...prev, newGroup]);
     setSelectedGroupId(newGroup.id);
     setNewGroupNameInput('');
+    setNewGroupColor('indigo');
   };
 
   const handleDeleteGroup = (id: string, name: string) => {
@@ -760,12 +872,20 @@ export default function App() {
     });
 
     // Transform freqMap into WordMetadata objects
-    const candidates = Object.entries(freqMap).map(([text, data]) => ({
-      text,
-      value: data.value,
-      percentage: 0,
-      chatIndices: data.chatIndices
-    }));
+    const candidates = Object.entries(freqMap).map(([text, data]) => {
+      const lowerCand = text.toLowerCase();
+      const matchedGroup = whitelistGroups.find(g =>
+        g.words.some(w => w.word.trim().toLowerCase() === lowerCand)
+      );
+      return {
+        text,
+        value: data.value,
+        percentage: 0,
+        chatIndices: data.chatIndices,
+        groupName: matchedGroup?.name,
+        groupColor: matchedGroup?.color
+      };
+    });
 
     // Sort by frequency descending and limit to top 50
     const sortedCandidates = candidates
@@ -781,7 +901,7 @@ export default function App() {
     });
 
     return sortedCandidates;
-  }, [appliedChatsMatchingSelectedGroup, appliedSelectedGroup, appliedStopWordsSet]);
+  }, [appliedChatsMatchingSelectedGroup, appliedSelectedGroup, appliedStopWordsSet, whitelistGroups]);
 
   // Synchronize the textarea when analysis values change so JSON mode has latest
   useEffect(() => {
@@ -825,19 +945,28 @@ export default function App() {
       try {
         const parsed = JSON.parse(customJsonArray);
         if (Array.isArray(parsed)) {
-          return (parsed as any[]).map((item: any) => ({
-            text: String(item.text),
-            value: Number(item.value),
-            percentage: Number(item.percentage || 0),
-            chatIndices: Array.isArray(item.chatIndices) ? item.chatIndices.map(String) : []
-          }));
+          return (parsed as any[]).map((item: any) => {
+            const textVal = String(item.text);
+            const lowerCand = textVal.toLowerCase();
+            const matchedGroup = whitelistGroups.find(g =>
+              g.words.some(w => w.word.trim().toLowerCase() === lowerCand)
+            );
+            return {
+              text: textVal,
+              value: Number(item.value),
+              percentage: Number(item.percentage || 0),
+              chatIndices: Array.isArray(item.chatIndices) ? item.chatIndices.map(String) : [],
+              groupName: item.groupName || matchedGroup?.name,
+              groupColor: item.groupColor || matchedGroup?.color
+            };
+          });
         }
       } catch (e) {
         // fallback to standard
       }
     }
     return wordCloudDataArray;
-  }, [isJsonMode, customJsonArray, wordCloudDataArray]);
+  }, [isJsonMode, customJsonArray, wordCloudDataArray, whitelistGroups]);
 
   // Extract and deduplicate Chat IDs for the currently selected word
   const selectedWordUniqueChatIds = useMemo(() => {
@@ -879,6 +1008,8 @@ export default function App() {
       return <div className="leading-relaxed text-sm" style={{ direction: 'rtl', textAlign: 'right' }}>{text}</div>;
     }
 
+    const cl = getGroupColorClasses(appliedSelectedGroup?.color || 'indigo');
+
     // Build a unified regex to replace matches safely
     // To avoid HTML corruption during consecutive replacements, we tokenise first
     const tokens: { id: string; original: string; replacement: string }[] = [];
@@ -889,10 +1020,17 @@ export default function App() {
       
       highlighted = highlighted.replace(regex, (match) => {
         const tokenId = `___MATCH_TOKEN_${index}_${Math.random().toString(36).substr(2, 5)}___`;
+        
+        // Highlight word cloud selection with a special outline if matches, otherwise use group classes
+        const isClickedWord = selectedWordMetadata && match.toLowerCase() === selectedWordMetadata.text.toLowerCase();
+        const baseClass = isClickedWord 
+          ? `${cl.highlightSpan} ring-2 ring-indigo-500/50 dark:ring-indigo-400/50 scale-105` 
+          : cl.highlightSpan;
+
         tokens.push({
           id: tokenId,
           original: match,
-          replacement: `<span class="bg-[#0057D9]/10 text-[#0057D9] font-semibold px-1.5 py-0.5 rounded border border-[#0057D9]/20 hover:bg-[#0057D9]/20 transition-all cursor-pointer" title="کلمه کلیدی">${match}</span>`
+          replacement: `<span class="${baseClass}" title="کلمه کلیدی">${match}</span>`
         });
         return tokenId;
       });
@@ -903,7 +1041,7 @@ export default function App() {
       highlighted = highlighted.replace(token.id, token.replacement);
     });
 
-    return <div dangerouslySetInnerHTML={{ __html: highlighted }} className="leading-relaxed text-sm text-slate-700" />;
+    return <div dangerouslySetInnerHTML={{ __html: highlighted }} className="leading-relaxed text-sm text-slate-700 dark:text-slate-300" />;
   };
 
   // Drag and drop handlers for CSV upload
@@ -1052,6 +1190,28 @@ export default function App() {
                     </select>
                   </div>
                 )}
+
+                {/* 
+                  کد آماده برای دکمه تحلیل هوشمند چت‌ها با هوش مصنوعی (Gemini API)
+                  شما می‌توانید با فعال‌سازی این بخش و فراخوانی متدهای فایل src/lib/gemini.ts، تحلیل خودکار موضوعات پیام‌ها را پیاده‌سازی کنید.
+                  
+                  <button 
+                    onClick={async () => {
+                      alert("در حال ارتباط با هوش مصنوعی گوگل برای تحلیل گفتگوها...");
+                      // const result = await analyzeChatsWithAI(chatRows);
+                      // alert(result);
+                    }}
+                    className={`font-bold text-xs px-3 py-2 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
+                      isDarkMode 
+                        ? 'bg-indigo-650 hover:bg-indigo-600 text-white border-indigo-500 shadow-sm' 
+                        : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-700 shadow-sm'
+                    }`}
+                    title="تحلیل هوشمند چت‌ها با هوش مصنوعی"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>تحلیل هوشمند چت‌ها (Gemini)</span>
+                  </button>
+                */}
 
 
               </div>
@@ -1231,40 +1391,62 @@ export default function App() {
                   </div>
 
                   {/* Input Form for New Group */}
-                  <div className="flex gap-2 mb-3">
-                    <input
-                      type="text"
-                      value={newGroupNameInput}
-                      onChange={(e) => setNewGroupNameInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddGroup();
-                        }
-                      }}
-                      placeholder="نام لیست جدید (مثلاً: لیست صرافی‌ها)..."
-                      className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-indigo-500 outline-none transition-all font-medium placeholder:text-slate-500 ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
-                    />
-                    <button
-                      onClick={handleAddGroup}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
-                      title="ایجاد لیست جدید"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>ایجاد</span>
-                    </button>
+                  <div className="flex flex-col gap-2 mb-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newGroupNameInput}
+                        onChange={(e) => setNewGroupNameInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddGroup();
+                          }
+                        }}
+                        placeholder="نام لیست جدید (مثلاً: لیست صرافی‌ها)..."
+                        className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-indigo-500 outline-none transition-all font-medium placeholder:text-slate-500 ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
+                      />
+                      <button
+                        onClick={handleAddGroup}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                        title="ایجاد لیست جدید"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>ایجاد</span>
+                      </button>
+                    </div>
+                    {/* Inline Color Selection Row */}
+                    <div className="flex items-center gap-2 pr-1">
+                      <span className="text-[10px] text-slate-400 font-bold">انتخاب رنگ لیست:</span>
+                      <div className="flex items-center gap-1.5">
+                        {COLOR_PRESETS.map(preset => {
+                          const isSelected = newGroupColor === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              onClick={() => setNewGroupColor(preset.id)}
+                              className={`w-4 h-4 rounded-full ${preset.bgClass} cursor-pointer transition-all hover:scale-115 flex items-center justify-center shrink-0 ${
+                                isSelected ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-slate-950 scale-110' : 'opacity-70 hover:opacity-100'
+                              }`}
+                              title={preset.name}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Groups Selection List */}
                   <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1 mb-4">
                     {whitelistGroups.map((g) => {
                       const isSelected = g.id === selectedGroupId;
+                      const cl = getGroupColorClasses(g.color);
                       return (
                         <div
                           key={g.id}
                           onClick={() => setSelectedGroupId(g.id)}
                           className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition-all ${
                             isSelected 
-                              ? (isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 shadow-xs' : 'bg-indigo-50/50 border-indigo-200 shadow-xs') 
+                              ? (isDarkMode ? `${cl.activeBg} border-${g.color || 'indigo'}-500/40 shadow-xs` : `${cl.activeBg} border-${g.color || 'indigo'}-200 shadow-xs`) 
                               : (isDarkMode ? 'bg-slate-950/40 border-slate-800/80 hover:bg-slate-900/60' : 'bg-white border-slate-200 hover:bg-slate-50')
                           }`}
                         >
@@ -1276,13 +1458,13 @@ export default function App() {
                                 e.stopPropagation();
                                 handleToggleGroupActive(g.id);
                               }}
-                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
+                              className={`rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer`}
                               title="فعال / غیرفعال سازی لیست"
                             />
-                            <span className={`font-semibold ${g.isActive ? (isDarkMode ? 'text-slate-200' : 'text-slate-800') : 'text-slate-500 line-through font-normal'}`}>
+                            <span className={`font-semibold transition-colors ${g.isActive ? (isSelected ? cl.text : (isDarkMode ? 'text-slate-200' : 'text-slate-800')) : 'text-slate-500 line-through font-normal'}`}>
                               {g.name}
                             </span>
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-500 border-slate-200/50'}`}>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${isSelected ? cl.badge : (isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-500 border-slate-200/50')}`}>
                               {g.words.length} کلمه
                             </span>
                           </div>
@@ -1306,6 +1488,7 @@ export default function App() {
                   {(() => {
                     const currentGroup = whitelistGroups.find(g => g.id === selectedGroupId) || whitelistGroups[0];
                     if (!currentGroup) return null;
+                    const cl = getGroupColorClasses(currentGroup.color);
 
                     // Sort whitelist words based on selected sorting option
                     const sortedCurrentGroupWords = [...currentGroup.words].sort((a, b) => {
@@ -1329,6 +1512,8 @@ export default function App() {
                             مدیریت کلمات لیست «{currentGroup.name}»
                           </span>
                         </div>
+
+
 
                         <div className="flex gap-2 mb-2">
                           <input
@@ -1401,11 +1586,11 @@ export default function App() {
                                 return (
                                   <div
                                     key={wordObj.id}
-                                    className={`rounded py-0.5 px-2 flex items-center gap-1.5 shadow-xs text-xs hover:border-indigo-500/40 transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}
+                                    className={`rounded-lg py-1 px-2.5 flex items-center gap-1.5 shadow-xs text-xs border transition-all hover:scale-102 ${cl.badge}`}
                                   >
-                                    <span className="font-medium">{wordObj.word}</span>
+                                    <span className="font-semibold">{wordObj.word}</span>
                                     {frequency > 0 && (
-                                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${isDarkMode ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/25' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border bg-white/40 dark:bg-black/20 ${cl.text}`}>
                                         {frequency}
                                       </span>
                                     )}
