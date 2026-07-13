@@ -438,6 +438,7 @@ export default function App() {
   // Interaction States
   const [selectedWordMetadata, setSelectedWordMetadata] = useState<WordMetadata | null>(null);
   const [copiedState, setCopiedState] = useState<string | null>(null);
+  const [wordCloudUseAllChats, setWordCloudUseAllChats] = useState<boolean>(false);
   
   // Selection of chats for PNG image export (Max 5)
   const [selectedChatsForImage, setSelectedChatsForImage] = useState<ChatRow[]>([]);
@@ -888,15 +889,16 @@ export default function App() {
   }, [chatRows, selectedGroup, chatsMatchingSelectedGroup]);
 
   // Synchronize JSON mode
-  // Generates the word cloud from ALL words in the chats related to the selected whitelist group, excluding stop words
+  // Generates the word cloud from ALL words in the chats related to the selected whitelist group (or ALL chats if toggled), excluding stop words
   const wordCloudDataArray = useMemo<WordMetadata[]>(() => {
-    if (appliedChatsMatchingSelectedGroup.length === 0) {
+    const targetChats = wordCloudUseAllChats ? chatRows : appliedChatsMatchingSelectedGroup;
+    if (targetChats.length === 0) {
       return [];
     }
 
     const freqMap: Record<string, { value: number; chatIndices: string[] }> = {};
 
-    appliedChatsMatchingSelectedGroup.forEach(row => {
+    targetChats.forEach(row => {
       const text = row.text || '';
       
       // Keep only Persian letters, English letters, and numbers. Replace all others with space.
@@ -910,12 +912,12 @@ export default function App() {
         if (word.length >= 2) {
           const lowerWord = word.toLowerCase();
           
-          // Whitelist words of the SELECTED group are ALWAYS preserved.
-          const isSelectedGroupWord = appliedSelectedGroup?.words.some(
-            w => w.word.trim().toLowerCase() === lowerWord
+          // Check if word is part of ANY whitelist group or is the selected group word
+          const matchedGroup = whitelistGroups.find(g =>
+            g.words.some(w => w.word.trim().toLowerCase() === lowerWord)
           );
           
-          if (isSelectedGroupWord || !appliedStopWordsSet.has(lowerWord)) {
+          if (matchedGroup || !appliedStopWordsSet.has(lowerWord)) {
             if (!freqMap[word]) {
               freqMap[word] = { value: 0, chatIndices: [] };
             }
@@ -958,7 +960,7 @@ export default function App() {
     });
 
     return sortedCandidates;
-  }, [appliedChatsMatchingSelectedGroup, appliedSelectedGroup, appliedStopWordsSet, whitelistGroups]);
+  }, [appliedChatsMatchingSelectedGroup, chatRows, wordCloudUseAllChats, appliedStopWordsSet, whitelistGroups]);
 
   // Synchronize the textarea when analysis values change so JSON mode has latest
   useEffect(() => {
@@ -1871,6 +1873,38 @@ export default function App() {
                 </button>
               </div>
             )}
+
+            {/* Real-time / Entire Chats vs List-based Toggle */}
+            <div className={`mb-4 px-3 py-2.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-colors ${
+              isDarkMode ? 'bg-slate-950/30 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-indigo-500">📊</span>
+                <span className={`font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  محدوده محاسبه کلمات کلیدی:
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  wordCloudUseAllChats 
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                    : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                }`}>
+                  {wordCloudUseAllChats ? 'بر اساس کل چت‌ها' : 'بر اساس لیست‌های منتخب'}
+                </span>
+              </div>
+              
+              <label className="relative inline-flex items-center cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={wordCloudUseAllChats}
+                  onChange={(e) => setWordCloudUseAllChats(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-300 dark:bg-slate-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                <span className="mr-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  محاسبه بر اساس کل گفتگوها (بدون فیلتر لیست)
+                </span>
+              </label>
+            </div>
 
             <WordCloud 
               words={activeCloudWords} 
