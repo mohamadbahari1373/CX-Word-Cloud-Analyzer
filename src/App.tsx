@@ -213,6 +213,7 @@ export default function App() {
 
   const [stopWordsInput, setStopWordsInput] = useState<string>('');
   const [stopWordsSearch, setStopWordsSearch] = useState<string>('');
+  const [activeManagementTab, setActiveManagementTab] = useState<'whitelist' | 'stopWords'>('whitelist');
 
   useEffect(() => {
     localStorage.setItem('cx_stop_words', JSON.stringify(stopWords));
@@ -1051,18 +1052,7 @@ export default function App() {
                   </div>
                 )}
 
-                <button 
-                  onClick={() => setCsvRawText(DEFAULT_CSV_CONTENT)} 
-                  className={`font-bold text-xs px-3 py-2 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
-                    isDarkMode 
-                      ? 'bg-slate-800 hover:bg-slate-750 text-slate-200 border-slate-700 shadow-sm' 
-                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-xs'
-                  }`}
-                  title="بارگذاری نمونه چت‌های پیش‌فرض"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-[#0057D9]" />
-                  <span>بارگذاری گفت‌وگوهای نمونه</span>
-                </button>
+
               </div>
 
             </div>
@@ -1200,368 +1190,387 @@ export default function App() {
           </div>
         </section>
 
-        {/* LEFT COLUMN: WHITELIST MANAGEMENT & DYNAMIC API INPUT */}
-        <section className="lg:col-span-4 space-y-6 flex flex-col">
+        {/* LEFT COLUMN: WHITELIST & STOP WORDS UNIFIED MANAGEMENT */}
+        <section className="lg:col-span-4 flex flex-col">
           
-          {/* WHITELIST MANAGEMENT PANEL */}
-          <div id="whitelist-panel" className={`rounded-xl border shadow-sm p-5 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
-            <div className={`flex items-center justify-between pb-3 border-b mb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-500" />
-                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>مدیریت لیست‌های سفید (دسته‌بندی شده)</h3>
-              </div>
-            </div>
-
-            <p className={`text-[11px] mb-3 leading-relaxed font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              در این بخش می‌توانید چندین لیست موضوعی مختلف تعریف کنید و کلمات مورد نظر را در هر دسته مدیریت کنید. با فعال/غیرفعال کردن هر لیست، کلمات آن فورا از محاسبات ابرکلمات اعمال یا حذف می‌شوند.
-            </p>
-
-            {/* Input Form for New Group */}
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={newGroupNameInput}
-                onChange={(e) => setNewGroupNameInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddGroup();
-                  }
-                }}
-                placeholder="نام لیست جدید (مثلاً: لیست صرافی‌ها)..."
-                className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-indigo-500 outline-none transition-all font-medium placeholder:text-slate-500 ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
-              />
+          <div className={`rounded-xl border shadow-sm flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
+            
+            {/* Unified Tabs Header */}
+            <div className={`flex border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
               <button
-                onClick={handleAddGroup}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
-                title="ایجاد لیست جدید"
+                onClick={() => setActiveManagementTab('whitelist')}
+                className={`flex-1 py-3 px-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeManagementTab === 'whitelist'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5'
+                    : 'border-transparent text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
               >
-                <Plus className="w-4 h-4" />
-                <span>ایجاد</span>
+                <Layers className="w-4 h-4" />
+                <span>لیست‌های سفید</span>
+              </button>
+              <button
+                onClick={() => setActiveManagementTab('stopWords')}
+                className={`flex-1 py-3 px-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeManagementTab === 'stopWords'
+                    ? 'border-rose-600 text-rose-600 dark:text-rose-400 bg-rose-500/5'
+                    : 'border-transparent text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                <span>کلمات استاپ</span>
               </button>
             </div>
 
-            {/* Groups Selection List */}
-            <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1 mb-4">
-              {whitelistGroups.map((g) => {
-                const isSelected = g.id === selectedGroupId;
-                return (
-                  <div
-                    key={g.id}
-                    onClick={() => setSelectedGroupId(g.id)}
-                    className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition-all ${
-                      isSelected 
-                        ? (isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 shadow-xs' : 'bg-indigo-50/50 border-indigo-200 shadow-xs') 
-                        : (isDarkMode ? 'bg-slate-950/40 border-slate-800/80 hover:bg-slate-900/60' : 'bg-white border-slate-200 hover:bg-slate-50')
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={g.isActive}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleToggleGroupActive(g.id);
-                        }}
-                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
-                        title="فعال / غیرفعال سازی لیست"
-                      />
-                      <span className={`font-semibold ${g.isActive ? (isDarkMode ? 'text-slate-200' : 'text-slate-800') : 'text-slate-500 line-through font-normal'}`}>
-                        {g.name}
-                      </span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-500 border-slate-200/50'}`}>
-                        {g.words.length} کلمه
-                      </span>
-                    </div>
-                    
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteGroup(g.id, g.name);
-                      }}
-                      className="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                      title="حذف کامل این لیست"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Current Selected Group Word Management */}
-            {(() => {
-              const currentGroup = whitelistGroups.find(g => g.id === selectedGroupId) || whitelistGroups[0];
-              if (!currentGroup) return null;
-
-              // Sort whitelist words based on selected sorting option
-              const sortedCurrentGroupWords = [...currentGroup.words].sort((a, b) => {
-                if (whitelistWordsSortBy === 'alphabetical') {
-                  return a.word.localeCompare(b.word, 'fa', { sensitivity: 'base' });
-                } else if (whitelistWordsSortBy === 'frequency') {
-                  const freqA = analysisResult.wordFrequencies[a.word] || 0;
-                  const freqB = analysisResult.wordFrequencies[b.word] || 0;
-                  return freqB - freqA; // highest frequency first
-                } else {
-                  // 'date' (default: newest first)
-                  return b.createdAt - a.createdAt;
-                }
-              });
-
-              return (
-                <div className={`border-t pt-3 mt-1 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-bold flex items-center gap-1 ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-                      <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
-                      مدیریت کلمات لیست «{currentGroup.name}»
-                    </span>
+            {/* Container for active tab content */}
+            <div className="p-5 flex flex-col">
+              {activeManagementTab === 'whitelist' ? (
+                <div id="whitelist-panel" className="flex flex-col">
+                  <div className="flex items-center justify-between pb-3 mb-4 border-b border-dashed dark:border-slate-800 border-slate-100">
+                    <h3 className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>لیست‌های سفید (دسته‌بندی شده)</h3>
                   </div>
 
-                  <div className="flex gap-2 mb-2">
+                  {/* Input Form for New Group */}
+                  <div className="flex gap-2 mb-3">
                     <input
                       type="text"
-                      value={newWordInput}
-                      onChange={(e) => setNewWordInput(e.target.value)}
+                      value={newGroupNameInput}
+                      onChange={(e) => setNewGroupNameInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          handleAddWordToGroup();
+                          handleAddGroup();
                         }
                       }}
-                      placeholder="کلمه جدید (برای افزودن همزمان با ویرگول جدا کنید)..."
-                      className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-indigo-500 outline-none placeholder:text-slate-500 ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
+                      placeholder="نام لیست جدید (مثلاً: لیست صرافی‌ها)..."
+                      className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-indigo-500 outline-none transition-all font-medium placeholder:text-slate-500 ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
                     />
                     <button
-                      onClick={handleAddWordToGroup}
-                      className={`p-2 rounded-lg transition-colors shrink-0 flex items-center justify-center cursor-pointer ${isDarkMode ? 'bg-slate-850 hover:bg-slate-750 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
-                      title="افزودن به این لیست"
+                      onClick={handleAddGroup}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                      title="ایجاد لیست جدید"
                     >
                       <Plus className="w-4 h-4" />
+                      <span>ایجاد</span>
                     </button>
                   </div>
 
-                  {/* Sorting Controls for Whitelist Words */}
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-[10px] font-semibold text-slate-400">ترتیب کلمات:</span>
-                    <button
-                      onClick={() => setWhitelistWordsSortBy('date')}
-                      className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
-                        whitelistWordsSortBy === 'date'
-                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                      }`}
-                    >
-                      جدیدترین‌ها
-                    </button>
-                    <button
-                      onClick={() => setWhitelistWordsSortBy('alphabetical')}
-                      className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
-                        whitelistWordsSortBy === 'alphabetical'
-                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                      }`}
-                    >
-                      الفبایی
-                    </button>
-                    <button
-                      onClick={() => setWhitelistWordsSortBy('frequency')}
-                      className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
-                        whitelistWordsSortBy === 'frequency'
-                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                      }`}
-                      title="نمایش بر اساس فراوانی تکرار کلمه در چت‌ها"
-                    >
-                      تعداد تکرار
-                    </button>
+                  {/* Groups Selection List */}
+                  <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1 mb-4">
+                    {whitelistGroups.map((g) => {
+                      const isSelected = g.id === selectedGroupId;
+                      return (
+                        <div
+                          key={g.id}
+                          onClick={() => setSelectedGroupId(g.id)}
+                          className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition-all ${
+                            isSelected 
+                              ? (isDarkMode ? 'bg-indigo-500/10 border-indigo-500/30 shadow-xs' : 'bg-indigo-50/50 border-indigo-200 shadow-xs') 
+                              : (isDarkMode ? 'bg-slate-950/40 border-slate-800/80 hover:bg-slate-900/60' : 'bg-white border-slate-200 hover:bg-slate-50')
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={g.isActive}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleToggleGroupActive(g.id);
+                              }}
+                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
+                              title="فعال / غیرفعال سازی لیست"
+                            />
+                            <span className={`font-semibold ${g.isActive ? (isDarkMode ? 'text-slate-200' : 'text-slate-800') : 'text-slate-500 line-through font-normal'}`}>
+                              {g.name}
+                            </span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-500 border-slate-200/50'}`}>
+                              {g.words.length} کلمه
+                            </span>
+                          </div>
+                          
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteGroup(g.id, g.name);
+                            }}
+                            className="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                            title="حذف کامل این لیست"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
 
-                  {/* Whitelist Badges Container */}
-                  <div className={`flex-grow max-h-[160px] overflow-y-auto pr-1 rounded-lg p-2.5 border ${isDarkMode ? 'bg-slate-950 border-slate-800/80' : 'bg-slate-50 border-slate-200/60'}`}>
-                    {sortedCurrentGroupWords.length === 0 ? (
-                      <div className={`text-center py-4 text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                        هیچ کلمه‌ای در این لیست قرار ندارد.
+                  {/* Current Selected Group Word Management */}
+                  {(() => {
+                    const currentGroup = whitelistGroups.find(g => g.id === selectedGroupId) || whitelistGroups[0];
+                    if (!currentGroup) return null;
+
+                    // Sort whitelist words based on selected sorting option
+                    const sortedCurrentGroupWords = [...currentGroup.words].sort((a, b) => {
+                      if (whitelistWordsSortBy === 'alphabetical') {
+                        return a.word.localeCompare(b.word, 'fa', { sensitivity: 'base' });
+                      } else if (whitelistWordsSortBy === 'frequency') {
+                        const freqA = analysisResult.wordFrequencies[a.word] || 0;
+                        const freqB = analysisResult.wordFrequencies[b.word] || 0;
+                        return freqB - freqA; // highest frequency first
+                      } else {
+                        // 'date' (default: newest first)
+                        return b.createdAt - a.createdAt;
+                      }
+                    });
+
+                    return (
+                      <div className={`border-t pt-3 mt-1 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-xs font-bold flex items-center gap-1 ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                            <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
+                            مدیریت کلمات لیست «{currentGroup.name}»
+                          </span>
+                        </div>
+
+                        <div className="flex gap-2 mb-2">
+                          <input
+                            type="text"
+                            value={newWordInput}
+                            onChange={(e) => setNewWordInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleAddWordToGroup();
+                              }
+                            }}
+                            placeholder="کلمه جدید (برای افزودن همزمان با ویرگول جدا کنید)..."
+                            className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-indigo-500 outline-none placeholder:text-slate-500 ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
+                          />
+                          <button
+                            onClick={handleAddWordToGroup}
+                            className={`p-2 rounded-lg transition-colors shrink-0 flex items-center justify-center cursor-pointer ${isDarkMode ? 'bg-slate-850 hover:bg-slate-750 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
+                            title="افزودن به این لیست"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Sorting Controls for Whitelist Words */}
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className="text-[10px] font-semibold text-slate-400">ترتیب کلمات:</span>
+                          <button
+                            onClick={() => setWhitelistWordsSortBy('date')}
+                            className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
+                              whitelistWordsSortBy === 'date'
+                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                          >
+                            جدیدترین‌ها
+                          </button>
+                          <button
+                            onClick={() => setWhitelistWordsSortBy('alphabetical')}
+                            className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
+                              whitelistWordsSortBy === 'alphabetical'
+                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                          >
+                            الفبایی
+                          </button>
+                          <button
+                            onClick={() => setWhitelistWordsSortBy('frequency')}
+                            className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
+                              whitelistWordsSortBy === 'frequency'
+                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                            title="نمایش بر اساس فراوانی تکرار کلمه در چت‌ها"
+                          >
+                            تعداد تکرار
+                          </button>
+                        </div>
+
+                        {/* Whitelist Badges Container */}
+                        <div className={`flex-grow max-h-[160px] overflow-y-auto pr-1 rounded-lg p-2.5 border ${isDarkMode ? 'bg-slate-950 border-slate-800/80' : 'bg-slate-50 border-slate-200/60'}`}>
+                          {sortedCurrentGroupWords.length === 0 ? (
+                            <div className={`text-center py-4 text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                              هیچ کلمه‌ای در این لیست قرار ندارد.
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {sortedCurrentGroupWords.map((wordObj) => {
+                                const frequency = analysisResult.wordFrequencies[wordObj.word] || 0;
+                                return (
+                                  <div
+                                    key={wordObj.id}
+                                    className={`rounded py-0.5 px-2 flex items-center gap-1.5 shadow-xs text-xs hover:border-indigo-500/40 transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}
+                                  >
+                                    <span className="font-medium">{wordObj.word}</span>
+                                    {frequency > 0 && (
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${isDarkMode ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/25' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
+                                        {frequency}
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={() => handleRemoveWordFromGroup(currentGroup.id, wordObj.id)}
+                                      className="text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                                      title="حذف کلمه از این لیست"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {sortedCurrentGroupWords.map((wordObj) => {
-                          const frequency = analysisResult.wordFrequencies[wordObj.word] || 0;
-                          return (
+                    );
+                  })()}
+                </div>
+              ) : (
+                <div id="stop-words-panel" className="flex flex-col">
+                  <div className="flex items-center justify-between pb-3 mb-4 border-b border-dashed dark:border-slate-800 border-slate-100">
+                    <h3 className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>مدیریت کلمات استاپ (Stop Words)</h3>
+                    <button
+                      onClick={() => {
+                        if (confirm("آیا مایلید لیست کلمات استاپ را به کلمات پیش‌فرض بازیابی کنید؟ کلمات افزوده شده شما پاک خواهند شد.")) {
+                          setStopWords(DEFAULT_STOP_WORDS);
+                        }
+                      }}
+                      className={`text-[9px] flex items-center gap-1 font-bold px-2 py-1 rounded transition-colors cursor-pointer ${
+                        isDarkMode 
+                          ? 'bg-slate-850 hover:bg-slate-800 text-slate-300 border-slate-800' 
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                      }`}
+                      title="بازیابی کلمات پیش‌فرض"
+                    >
+                      <RotateCcw className="w-3 h-3 text-[#0057D9]" />
+                      <span>بازنشانی پیش‌فرض</span>
+                    </button>
+                  </div>
+
+                  {/* Input to add new stop words */}
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={stopWordsInput}
+                      onChange={(e) => setStopWordsInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const trimmed = stopWordsInput.trim();
+                          if (trimmed) {
+                            const wordsToAdd = trimmed.split(/[,،\s]+/).filter(Boolean);
+                            setStopWords(prev => {
+                              const next = [...prev];
+                              wordsToAdd.forEach(w => {
+                                if (!next.includes(w.toLowerCase())) {
+                                  next.push(w.toLowerCase());
+                                }
+                              });
+                              return next;
+                            });
+                            setStopWordsInput('');
+                          }
+                        }
+                      }}
+                      placeholder="کلمه استاپ جدید (با ویرگول یا فاصله جدا کنید)..."
+                      className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-rose-500 outline-none border transition-all font-medium placeholder:text-slate-500 ${
+                        isDarkMode 
+                          ? 'bg-slate-950 border-slate-800 text-slate-100 focus:border-rose-500/50' 
+                          : 'bg-slate-50 border-slate-200 text-slate-850 focus:border-rose-500/50'
+                      }`}
+                    />
+                    <button
+                      onClick={() => {
+                        const trimmed = stopWordsInput.trim();
+                        if (trimmed) {
+                          const wordsToAdd = trimmed.split(/[,،\s]+/).filter(Boolean);
+                          setStopWords(prev => {
+                            const next = [...prev];
+                            wordsToAdd.forEach(w => {
+                              if (!next.includes(w.toLowerCase())) {
+                                next.push(w.toLowerCase());
+                              }
+                            });
+                            return next;
+                          });
+                          setStopWordsInput('');
+                        }
+                      }}
+                      className="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                      title="افزودن کلمه استاپ"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>افزودن</span>
+                    </button>
+                  </div>
+
+                  {/* Quick search & Filter inside Stop Words panel */}
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={stopWordsSearch}
+                      onChange={(e) => setStopWordsSearch(e.target.value)}
+                      placeholder="جستجو در لیست کلمات استاپ..."
+                      className={`w-full text-[11px] px-2.5 py-1.5 rounded-md outline-none border transition-all font-medium placeholder:text-slate-500 ${
+                        isDarkMode 
+                          ? 'bg-slate-950 border-slate-800 text-slate-300 focus:border-rose-500/50' 
+                          : 'bg-slate-50 border-slate-200 text-slate-600 focus:border-rose-500/50'
+                      }`}
+                    />
+                    {stopWordsSearch && (
+                      <button 
+                        onClick={() => setStopWordsSearch('')}
+                        className="text-slate-400 hover:text-slate-600 cursor-pointer text-xs shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Stop Words Badges Container */}
+                  <div className={`flex-grow max-h-[160px] overflow-y-auto pr-1 rounded-lg p-2.5 border ${isDarkMode ? 'bg-slate-950 border-slate-800/80' : 'bg-slate-50 border-slate-200/60'}`}>
+                    {(() => {
+                      const filtered = stopWords.filter(word => 
+                        !stopWordsSearch.trim() || word.toLowerCase().includes(stopWordsSearch.toLowerCase().trim())
+                      );
+                      
+                      if (filtered.length === 0) {
+                        return (
+                          <div className={`text-center py-4 text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {stopWordsSearch ? 'کلمه‌ای یافت نشد.' : 'لیست کلمات استاپ خالی است.'}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="flex flex-wrap gap-1.5">
+                          {filtered.map((word, idx) => (
                             <div
-                              key={wordObj.id}
-                              className={`rounded py-0.5 px-2 flex items-center gap-1.5 shadow-xs text-xs hover:border-indigo-500/40 transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}
+                              key={`${word}-${idx}`}
+                              className={`rounded py-0.5 px-2 flex items-center gap-1.5 border shadow-xs text-xs hover:border-rose-500/40 transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}
                             >
-                              <span className="font-medium">{wordObj.word}</span>
-                              {frequency > 0 && (
-                                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${isDarkMode ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/25' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
-                                  {frequency}
-                                </span>
-                              )}
+                              <span className="font-medium">{word}</span>
                               <button
-                                onClick={() => handleRemoveWordFromGroup(currentGroup.id, wordObj.id)}
+                                onClick={() => {
+                                  setStopWords(prev => prev.filter(w => w !== word));
+                                }}
                                 className="text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                                title="حذف کلمه از این لیست"
+                                title="حذف کلمه از لیست استاپ"
                               >
                                 <X className="w-3 h-3" />
                               </button>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                    <span>تعداد کل کلمات استاپ: {stopWords.length} کلمه</span>
                   </div>
                 </div>
-              );
-            })()}
-          </div>
-
-          {/* STOP WORDS MANAGEMENT PANEL */}
-          <div id="stop-words-panel" className={`rounded-xl border shadow-sm p-5 flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-800'}`}>
-            <div className={`flex items-center justify-between pb-3 border-b mb-4 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-rose-500" />
-                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>مدیریت کلمات استاپ (Stop Words)</h3>
-              </div>
-              <button
-                onClick={() => {
-                  if (confirm("آیا مایلید لیست کلمات استاپ را به کلمات پیش‌فرض بازیابی کنید؟ کلمات افزوده شده شما پاک خواهند شد.")) {
-                    setStopWords(DEFAULT_STOP_WORDS);
-                  }
-                }}
-                className={`text-[10px] flex items-center gap-1 font-bold px-2 py-1 rounded transition-colors cursor-pointer ${
-                  isDarkMode 
-                    ? 'bg-slate-850 hover:bg-slate-800 text-slate-300 border-slate-800' 
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
-                }`}
-                title="بازیابی کلمات پیش‌فرض"
-              >
-                <RotateCcw className="w-3 h-3 text-[#0057D9]" />
-                <span>بازنشانی پیش‌فرض</span>
-              </button>
-            </div>
-
-            <p className={`text-[11px] mb-3 leading-relaxed font-normal ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              کلماتی که مایل هستید در محاسبات ابرکلمات نهایی نشان داده نشوند (مانند حروف ربط و اضافه) را در این بخش مدیریت کنید. با افزودن یا حذف کلمات، تغییرات بلافاصله روی ابرکلمات نهایی اعمال می‌شود.
-            </p>
-
-            {/* Input to add new stop words */}
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={stopWordsInput}
-                onChange={(e) => setStopWordsInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const trimmed = stopWordsInput.trim();
-                    if (trimmed) {
-                      const wordsToAdd = trimmed.split(/[,،\s]+/).filter(Boolean);
-                      setStopWords(prev => {
-                        const next = [...prev];
-                        wordsToAdd.forEach(w => {
-                          if (!next.includes(w.toLowerCase())) {
-                            next.push(w.toLowerCase());
-                          }
-                        });
-                        return next;
-                      });
-                      setStopWordsInput('');
-                    }
-                  }
-                }}
-                placeholder="کلمه استاپ جدید (با ویرگول یا فاصله جدا کنید)..."
-                className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-rose-500 outline-none border transition-all font-medium placeholder:text-slate-500 ${
-                  isDarkMode 
-                    ? 'bg-slate-950 border-slate-800 text-slate-100 focus:border-rose-500/50' 
-                    : 'bg-slate-50 border-slate-200 text-slate-850 focus:border-rose-500/50'
-                }`}
-              />
-              <button
-                onClick={() => {
-                  const trimmed = stopWordsInput.trim();
-                  if (trimmed) {
-                    const wordsToAdd = trimmed.split(/[,،\s]+/).filter(Boolean);
-                    setStopWords(prev => {
-                      const next = [...prev];
-                      wordsToAdd.forEach(w => {
-                        if (!next.includes(w.toLowerCase())) {
-                          next.push(w.toLowerCase());
-                        }
-                      });
-                      return next;
-                    });
-                    setStopWordsInput('');
-                  }
-                }}
-                className="bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
-                title="افزودن کلمه استاپ"
-              >
-                <Plus className="w-4 h-4" />
-                <span>افزودن</span>
-              </button>
-            </div>
-
-            {/* Quick search & Filter inside Stop Words panel */}
-            <div className="mb-2 flex items-center gap-1.5">
-              <input
-                type="text"
-                value={stopWordsSearch}
-                onChange={(e) => setStopWordsSearch(e.target.value)}
-                placeholder="جستجو در لیست کلمات استاپ..."
-                className={`w-full text-[11px] px-2.5 py-1.5 rounded-md outline-none border transition-all font-medium placeholder:text-slate-500 ${
-                  isDarkMode 
-                    ? 'bg-slate-950 border-slate-800 text-slate-300 focus:border-rose-500/50' 
-                    : 'bg-slate-50 border-slate-200 text-slate-600 focus:border-rose-500/50'
-                }`}
-              />
-              {stopWordsSearch && (
-                <button 
-                  onClick={() => setStopWordsSearch('')}
-                  className="text-slate-400 hover:text-slate-600 cursor-pointer text-xs shrink-0"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
               )}
             </div>
 
-            {/* Stop Words Badges Container */}
-            <div className={`flex-grow max-h-[160px] overflow-y-auto pr-1 rounded-lg p-2.5 border ${isDarkMode ? 'bg-slate-950 border-slate-800/80' : 'bg-slate-50 border-slate-200/60'}`}>
-              {(() => {
-                const filtered = stopWords.filter(word => 
-                  !stopWordsSearch.trim() || word.toLowerCase().includes(stopWordsSearch.toLowerCase().trim())
-                );
-                
-                if (filtered.length === 0) {
-                  return (
-                    <div className={`text-center py-4 text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                      {stopWordsSearch ? 'کلمه‌ای یافت نشد.' : 'لیست کلمات استاپ خالی است.'}
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="flex flex-wrap gap-1.5">
-                    {filtered.map((word, idx) => (
-                      <div
-                        key={`${word}-${idx}`}
-                        className={`rounded py-0.5 px-2 flex items-center gap-1.5 border shadow-xs text-xs hover:border-rose-500/40 transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}
-                      >
-                        <span className="font-medium">{word}</span>
-                        <button
-                          onClick={() => {
-                            setStopWords(prev => prev.filter(w => w !== word));
-                          }}
-                          className="text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                          title="حذف کلمه از لیست استاپ"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-              <span>تعداد کل کلمات استاپ: {stopWords.length} کلمه</span>
-            </div>
           </div>
 
         </section>
