@@ -297,6 +297,25 @@ export default function App() {
     });
   }, [chatRows, sortColumn, sortDirection]);
   
+  // Theme support
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('cx_theme');
+    return saved ? saved === 'dark' : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('cx_theme', isDarkMode ? 'dark' : 'light');
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#020617';
+      document.body.style.color = '#e2e8f0';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '#f8fafc';
+      document.body.style.color = '#0f172a';
+    }
+  }, [isDarkMode]);
+
   // State for Whitelist Groups (multi-list support)
   const [whitelistGroups, setWhitelistGroups] = useState<WhitelistGroup[]>(() => {
     const saved = localStorage.getItem('cx_whitelist_groups');
@@ -328,9 +347,70 @@ export default function App() {
   const [activeManagementTab, setActiveManagementTab] = useState<'whitelist' | 'stopWords'>('whitelist');
   const [isFilteredChatsExpanded, setIsFilteredChatsExpanded] = useState<boolean>(true);
 
+  // SQLite Database synchronization state
+  const [initialLoadComplete, setInitialLoadComplete] = useState<boolean>(false);
+
+  // Load initial data from SQLite backend on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/data');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.whitelistGroups && Array.isArray(data.whitelistGroups)) {
+            setWhitelistGroups(data.whitelistGroups);
+            setAppliedWhitelistGroups(data.whitelistGroups);
+            if (data.whitelistGroups.length > 0) {
+              setSelectedGroupId(data.whitelistGroups[0].id);
+              setAppliedSelectedGroupId(data.whitelistGroups[0].id);
+            }
+          }
+          if (data.stopWords && Array.isArray(data.stopWords)) {
+            setStopWords(data.stopWords);
+            setAppliedStopWords(data.stopWords);
+          }
+          if (data.theme) {
+            setIsDarkMode(data.theme === 'dark');
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load initial data from SQLite server:", err);
+      } finally {
+        setInitialLoadComplete(true);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Sync state to localStorage as a client-side offline fallback
   useEffect(() => {
     localStorage.setItem('cx_stop_words', JSON.stringify(stopWords));
   }, [stopWords]);
+
+  // Save all states automatically to SQLite backend upon any modification
+  useEffect(() => {
+    if (!initialLoadComplete) return;
+
+    const saveData = async () => {
+      try {
+        await fetch('/api/save-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            whitelistGroups,
+            stopWords,
+            theme: isDarkMode ? 'dark' : 'light'
+          })
+        });
+      } catch (err) {
+        console.error("Failed to save data to SQLite backend:", err);
+      }
+    };
+
+    // Debounce to prevent flooding the database with keystroke requests
+    const timer = setTimeout(saveData, 500);
+    return () => clearTimeout(timer);
+  }, [whitelistGroups, stopWords, isDarkMode, initialLoadComplete]);
 
   const stopWordsSet = useMemo(() => {
     return new Set(stopWords.map(w => w.trim().toLowerCase()).filter(Boolean));
@@ -506,25 +586,6 @@ export default function App() {
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Theme support
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('cx_theme');
-    return saved ? saved === 'dark' : false;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('cx_theme', isDarkMode ? 'dark' : 'light');
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.body.style.backgroundColor = '#020617';
-      document.body.style.color = '#e2e8f0';
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.style.backgroundColor = '#f8fafc';
-      document.body.style.color = '#0f172a';
-    }
-  }, [isDarkMode]);
 
   // Save Whitelist groups to localStorage on change
   useEffect(() => {
