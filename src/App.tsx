@@ -34,9 +34,12 @@ import {
   Moon,
   ChevronDown,
   ChevronUp,
-  ArrowUpDown
+  ArrowUpDown,
+  Camera,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toPng } from 'html-to-image';
 import { ChatRow, WhitelistWord, WhitelistGroup, WordMetadata, AnalysisResult } from './types';
 import WordCloud from './components/WordCloud';
 
@@ -435,6 +438,60 @@ export default function App() {
   // Interaction States
   const [selectedWordMetadata, setSelectedWordMetadata] = useState<WordMetadata | null>(null);
   const [copiedState, setCopiedState] = useState<string | null>(null);
+  
+  // Selection of chats for PNG image export (Max 5)
+  const [selectedChatsForImage, setSelectedChatsForImage] = useState<ChatRow[]>([]);
+  const [chatSelectionError, setChatSelectionError] = useState<string | null>(null);
+  const [isExportingImage, setIsExportingImage] = useState<boolean>(false);
+  const [isPreviewImageExpanded, setIsPreviewImageExpanded] = useState<boolean>(false);
+
+  const handleToggleChatForImage = (row: ChatRow) => {
+    setSelectedChatsForImage(prev => {
+      const exists = prev.some(c => c.id === row.id);
+      if (exists) {
+        return prev.filter(c => c.id !== row.id);
+      }
+      if (prev.length >= 5) {
+        setChatSelectionError('شما می‌توانید حداکثر ۵ گفتگو را برای خروجی تصویر انتخاب کنید.');
+        setTimeout(() => setChatSelectionError(null), 5000);
+        return prev;
+      }
+      return [...prev, row];
+    });
+  };
+
+  const handleDownloadChatsImage = async () => {
+    const element = document.getElementById('chats-export-image');
+    if (!element) return;
+    
+    setIsExportingImage(true);
+    try {
+      // Short delay for rendering cycle to settle
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const dataUrl = await toPng(element, {
+        quality: 0.98,
+        pixelRatio: 2, // 2x scale for crystal-clear retina resolution
+        backgroundColor: isDarkMode ? '#0b0f19' : '#f8fafc',
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+          width: '950px',
+        }
+      });
+      
+      const link = document.createElement('a');
+      link.download = `selected-chats-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Error exporting image:', err);
+      setChatSelectionError('خطایی در تولید تصویر رخ داد. لطفاً دوباره تلاش کنید.');
+      setTimeout(() => setChatSelectionError(null), 5000);
+    } finally {
+      setIsExportingImage(false);
+    }
+  };
 
   // Custom Confirmation Dialog states (bypasses sandboxed iframe allow-modals limits)
   const [deleteConfirmState, setDeleteConfirmState] = useState<{
@@ -909,6 +966,11 @@ export default function App() {
       setCustomJsonArray(JSON.stringify(wordCloudDataArray, null, 2));
     }
   }, [wordCloudDataArray, isJsonMode]);
+
+  // Keep selectedChatsForImage in sync with appliedChatsMatchingSelectedGroup
+  useEffect(() => {
+    setSelectedChatsForImage(prev => prev.filter(c => appliedChatsMatchingSelectedGroup.some(m => m.id === c.id)));
+  }, [appliedChatsMatchingSelectedGroup]);
 
   // Handle parsing of user-edited JSON array
   const handleJsonInputChange = (val: string) => {
@@ -1863,6 +1925,192 @@ export default function App() {
                     در زیر، تمامی پیام‌هایی که شامل حداقل یکی از واژه‌های تعریف شده در «لیست سفید» شما هستند را مشاهده می‌کنید. برای شفافیت، کلمات تطبیق داده شده با هایلایت <span className={`font-semibold px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-[#0057D9]/10 text-[#0057D9] border-[#0057D9]/15'}`}>آبی اعتماد</span> مشخص گردیده‌اند و گفتگوها بر اساس شناسه چت یکتا فیلتر شده‌اند تا از نمایش رکوردهای تکراری جلوگیری شود.
                   </p>
 
+                  {/* Chat Selection Control Panel & Image Export */}
+                  {selectedChatsForImage.length > 0 ? (
+                    <div className={`p-4 mb-6 rounded-xl border transition-all ${
+                      isDarkMode ? 'bg-slate-950/60 border-indigo-500/30' : 'bg-indigo-50/20 border-indigo-200'
+                    }`}>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-bold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                            <Camera className="w-4 h-4 animate-pulse" />
+                            <span>ابزار صادرات تصویر چت‌های منتخب ({selectedChatsForImage.length} از ۵)</span>
+                          </h4>
+                          <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            شما پیام‌های مدنظرتان را انتخاب کرده‌اید. در زیر می‌توانید پیش‌نمایش چیدمان تصویر را مشاهده کرده و آن را به صورت فایل PNG باکیفیت بارگیری کنید.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
+                          <button
+                            onClick={() => {
+                              setIsPreviewImageExpanded(!isPreviewImageExpanded);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                              isDarkMode ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300' : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
+                            }`}
+                          >
+                            <span>{isPreviewImageExpanded ? 'مخفی کردن پیش‌نمایش' : 'مشاهده پیش‌نمایش تصویر'}</span>
+                          </button>
+                          <button
+                            onClick={handleDownloadChatsImage}
+                            disabled={isExportingImage}
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 ${
+                              isExportingImage ? 'opacity-70 cursor-not-allowed' : ''
+                            }`}
+                          >
+                            {isExportingImage ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                            <span>{isExportingImage ? 'در حال تولید تصویر...' : 'دانلود تصویر PNG'}</span>
+                          </button>
+                          <button
+                            onClick={() => setSelectedChatsForImage([])}
+                            className="text-xs text-rose-500 hover:text-rose-600 px-2 py-1 font-semibold transition-colors cursor-pointer"
+                          >
+                            پاکسازی انتخاب‌ها
+                          </button>
+                        </div>
+                      </div>
+
+                      {chatSelectionError && (
+                        <div className="mt-3 flex items-center gap-2 text-xs font-bold text-rose-500">
+                          <AlertCircle className="w-4 h-4" />
+                          <span>{chatSelectionError}</span>
+                        </div>
+                      )}
+
+                      {/* Expandable Image Preview Area */}
+                      {isPreviewImageExpanded && (
+                        <div className="mt-4 border-t pt-4 border-slate-200/50 dark:border-slate-800/50">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400 font-bold">پیش‌نمایش زنده تصویر خروجی (با ابعاد استاندارد ۹۵۰ پیکسل):</span>
+                          </div>
+                          
+                          {/* Beautiful Scrollable Preview Wrapper */}
+                          <div className="overflow-x-auto border rounded-xl bg-slate-100 dark:bg-slate-950 p-4 max-h-[500px]">
+                            {/* This is the actual element that we will export */}
+                            <div 
+                              id="chats-export-image"
+                              className={`w-[910px] p-6 rounded-xl flex flex-col gap-6 shadow-2xl relative border overflow-hidden ${
+                                isDarkMode ? 'bg-slate-950 text-slate-100 border-slate-800' : 'bg-slate-50 text-slate-800 border-slate-200'
+                              }`}
+                              style={{ direction: 'rtl', fontFamily: 'Inter, system-ui' }}
+                            >
+                              {/* Decorative Tech Background Accent */}
+                              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+                              <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#0057D9]/5 rounded-full blur-3xl pointer-events-none" />
+
+                              {/* Image Header */}
+                              <div className="flex justify-between items-center pb-4 border-b border-slate-200/60 dark:border-slate-800/60 relative z-10">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                                    <span className="text-[10px] tracking-wider font-mono uppercase text-indigo-500 dark:text-indigo-400 font-bold">SELECTED CHATS EXPORT</span>
+                                  </div>
+                                  <h2 className="text-base font-black text-slate-800 dark:text-white">گزارش تصویری گفتگوهای برگزیده پشتیبانی</h2>
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400">تحلیل، دسته‌بندی و تطبیق داده شده بر اساس الگوهای لیست سفید شما</p>
+                                </div>
+                                
+                                <div className="text-left space-y-1.5 font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                                  <div>تاریخ تحلیل: {new Date().toLocaleDateString('fa-IR')}</div>
+                                  <div>تعداد چت‌ها: {selectedChatsForImage.length} مورد</div>
+                                  {selectedGroup && (
+                                    <div className="flex items-center gap-1 justify-end">
+                                      <span>لیست فعال:</span>
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                        getGroupColorClasses(selectedGroup.color).badge
+                                      }`}>{selectedGroup.name}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Selected Cards Grid */}
+                              <div className={`grid gap-4 z-10 relative ${
+                                selectedChatsForImage.length === 1 ? 'grid-cols-1' :
+                                selectedChatsForImage.length === 2 ? 'grid-cols-2' :
+                                selectedChatsForImage.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
+                              }`}>
+                                {selectedChatsForImage.map((row, index) => {
+                                  const groupWords = selectedGroup ? selectedGroup.words : [];
+                                  const containedKeywords = groupWords
+                                    .map(w => w.word.trim())
+                                    .filter(w => w.length > 0 && row.text.toLowerCase().includes(w.toLowerCase()));
+                                  const chatId = getChatId(row);
+                                  
+                                  return (
+                                    <div 
+                                      key={row.id}
+                                      className={`p-4 rounded-xl border flex flex-col justify-between gap-4 transition-all ${
+                                        isDarkMode 
+                                          ? 'bg-slate-900/60 border-slate-800' 
+                                          : 'bg-white border-slate-200/80 shadow-xs'
+                                      }`}
+                                    >
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between border-b pb-2 border-slate-200/40 dark:border-slate-800/40">
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
+                                              {index + 1}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">شناسه:</span>
+                                            <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300">{chatId}</span>
+                                          </div>
+                                          {row.data['دسته بندی'] && (
+                                            <span className={`border text-[9px] px-2 py-0.5 rounded-full font-bold ${
+                                              isDarkMode ? 'bg-[#0057D9]/20 text-indigo-300 border-[#0057D9]/30' : 'bg-[#0057D9]/5 text-[#0057D9] border-[#0057D9]/15'
+                                            }`}>
+                                              {row.data['دسته بندی']}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {/* Highlighted text container */}
+                                        <div className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                                          {highlightMatchedWords(row.text)}
+                                        </div>
+                                      </div>
+
+                                      {/* Contained Keywords Tag */}
+                                      <div className="border-t pt-2 border-slate-200/40 dark:border-slate-800/40">
+                                        <span className="text-[9px] text-slate-400 font-bold block mb-1">کلمات تطبیق یافته:</span>
+                                        <div className="flex flex-wrap gap-1">
+                                          {containedKeywords.map((kw, i) => (
+                                            <span 
+                                              key={i}
+                                              className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs"
+                                            >
+                                              {kw}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Image Footer Watermark */}
+                              <div className="flex justify-between items-center pt-4 border-t border-slate-200/60 dark:border-slate-800/60 text-[10px] text-slate-400 dark:text-slate-500 relative z-10">
+                                <div>سامانه تحلیل هوشمند گفتگوها - گزارش خروجی خودکار</div>
+                                <div className="font-mono text-[9px] tracking-widest text-indigo-500 dark:text-indigo-400 font-bold">SMART CHAT ANALYZER</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className={`p-3.5 mb-6 rounded-lg text-xs border flex items-center gap-2.5 ${
+                      isDarkMode ? 'bg-slate-900/40 border-slate-800/80 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                    }`}>
+                      <span className="text-lg">💡</span>
+                      <span>راهنمایی: با کلیک بر روی دکمه <strong>«انتخاب جهت تصویر»</strong> در هر کارت زیر، می‌توانید بین ۱ تا ۵ گفتگو را برگزینید تا تصویری خلاقانه، منظم و یکپارچه در قالب PNG از آن‌ها تهیه و دانلود کنید.</span>
+                    </div>
+                  )}
+
                   {/* FILTERED CARDS GRID */}
                   <div className="space-y-4">
                     {matchedChatsList.length === 0 ? (
@@ -1879,30 +2127,59 @@ export default function App() {
                             .filter(w => w.length > 0 && row.text.toLowerCase().includes(w.toLowerCase()));
 
                           const chatId = getChatId(row);
+                          const isSelectedForImage = selectedChatsForImage.some(c => c.id === row.id);
+                          const imageSelectionIndex = selectedChatsForImage.findIndex(c => c.id === row.id);
 
                           return (
                             <div 
                               key={row.id}
                               className={`p-4 rounded-lg border transition-all flex flex-col md:flex-row justify-between gap-4 shadow-xs ${
-                                isDarkMode 
-                                  ? 'bg-slate-950/40 border-slate-800 hover:border-indigo-500/50 hover:bg-slate-950' 
-                                  : 'bg-white border-slate-200 hover:border-[#0057D9]/30 hover:bg-slate-50/20 hover:shadow-md'
+                                isSelectedForImage
+                                  ? (isDarkMode ? 'border-indigo-500 bg-indigo-950/20 ring-1 ring-indigo-500/30' : 'border-indigo-400 bg-indigo-50/40 ring-1 ring-indigo-400/20')
+                                  : (isDarkMode 
+                                      ? 'bg-slate-950/40 border-slate-800 hover:border-indigo-500/30 hover:bg-slate-950' 
+                                      : 'bg-white border-slate-200 hover:border-[#0057D9]/20 hover:bg-slate-50/20 hover:shadow-md')
                               }`}
                             >
                               <div className="space-y-3 flex-grow">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`w-5 h-5 rounded-full border text-[10px] font-mono flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
-                                    {idx + 1}
-                                  </span>
-                                  <span className={`text-[10px] font-mono flex items-center gap-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                    <span>شناسه گفتگو:</span>
-                                    <span className={`border px-1.5 py-0.5 rounded font-semibold ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{chatId}</span>
-                                  </span>
-                                  {row.data['دسته بندی'] && (
-                                    <span className={`border text-[10px] px-2 py-0.5 rounded-md font-medium ${isDarkMode ? 'bg-[#0057D9]/15 text-indigo-300 border-[#0057D9]/30' : 'bg-[#0057D9]/5 text-[#0057D9] border-[#0057D9]/15'}`}>
-                                      {row.data['دسته بندی']}
+                                <div className="flex items-center gap-2 flex-wrap justify-between md:justify-start">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`w-5 h-5 rounded-full border text-[10px] font-mono flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'}`}>
+                                      {idx + 1}
                                     </span>
-                                  )}
+                                    <span className={`text-[10px] font-mono flex items-center gap-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                      <span>شناسه گفتگو:</span>
+                                      <span className={`border px-1.5 py-0.5 rounded font-semibold ${isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{chatId}</span>
+                                    </span>
+                                    {row.data['دسته بندی'] && (
+                                      <span className={`border text-[10px] px-2 py-0.5 rounded-md font-medium ${isDarkMode ? 'bg-[#0057D9]/15 text-indigo-300 border-[#0057D9]/30' : 'bg-[#0057D9]/5 text-[#0057D9] border-[#0057D9]/15'}`}>
+                                        {row.data['دسته بندی']}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Selection Checkbox/Toggle Button */}
+                                  <button
+                                    onClick={() => handleToggleChatForImage(row)}
+                                    className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                                      isSelectedForImage
+                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
+                                        : (isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900')
+                                    }`}
+                                    title="انتخاب برای خروجی تصویر"
+                                  >
+                                    {isSelectedForImage ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-white" />
+                                        <span>منتخب ({imageSelectionIndex + 1} از ۵)</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Plus className="w-3 h-3" />
+                                        <span>انتخاب جهت تصویر</span>
+                                      </>
+                                    )}
+                                  </button>
                                 </div>
                                 
                                 {/* Content with highlighter */}
