@@ -42,19 +42,39 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toPng } from 'html-to-image';
 import { ChatRow, WhitelistWord, WhitelistGroup, WordMetadata, AnalysisResult } from './types';
 import WordCloud from './components/WordCloud';
+import { 
+  parseAndConvertToJalali, 
+  formatJalali, 
+  compareJalali, 
+  PERS_MONTH_NAMES, 
+  jalaliToGregorian, 
+  gregorianToJalali, 
+  JalaliDate 
+} from './lib/jalali';
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip 
+} from 'recharts';
 
 // Default CSV Dataset to provide an incredible initial experience
-const DEFAULT_CSV_CONTENT = `متن گفتگو,دسته بندی,شناسه تیکت
-سلام، پشتیبانی محترم، کیفیت محصول عالی بود ولی فرآیند تحویل کمی طول کشید.,کیفیت و تحویل,1001
-سلام خسته نباشید، پشتیبانی خیلی سریع و عالی پاسخ داد. ممنون از خدمات خوبتون.,پشتیبانی مشتری,1002
-سلام، چرا مبلغ بازگشتی هنوز به حساب من واریز نشده؟ دو روزه منتظرم و پیگیری می‌کنم.,مالی,1003
-سلام، من برای معامله بیت کوین و خرید تتر از نوبیتکس و والکس استفاده می‌کنم ولی بیت پین هم خوبه.,ارزهای دیجیتال,1004
-اپلیکیشن شما سرعتش خیلی پایینه، لطفا کیفیت فنی اپ رو ارتقا بدید.,فنی,1005
-بسته‌بندی کالا خراب بود و کالا آسیب دیده بود. فرآیند مرجوعی چطوریاست؟,مرجوعی کالا,1006
-تخفیف‌های شما عالی هستند، خریدهای زیادی انجام دادم و کاملا راضی‌ام.,فروش,1007
-پشتیبانی تلفنی خیلی دیر پاسخ میده ولی پشتیبانی آنلاین و پیگیری سریع شما عالیه.,پشتیبانی مشتری,1008
-تتر و تون کوین سرعت انتقال خیلی بالایی دارند و کارمزدشون توی صرافی کوکوین کمتره.,ارزهای دیجیتال,1009
-امکان پیگیری سفارشات در سایت خیلی دقیق و مفیده و به سرعت کار ما کمک می‌کنه.,فنی,1010`;
+const DEFAULT_CSV_CONTENT = `متن گفتگو,دسته بندی,شناسه تیکت,تاریخ میلادی
+سلام، پشتیبانی محترم، کیفیت محصول عالی بود ولی فرآیند تحویل کمی طول کشید.,کیفیت و تحویل,1001,2026-07-01
+سلام خسته نباشید، پشتیبانی خیلی سریع و عالی پاسخ داد. ممنون از خدمات خوبتون.,پشتیبانی مشتری,1002,2026-07-02
+سلام، چرا مبلغ بازگشتی هنوز به حساب من واریز نشده؟ دو روزه منتظرم و پیگیری می‌کنم.,مالی,1003,2026-07-03
+سلام، من برای معامله بیت کوین و خرید تتر از نوبیتکس و والکس استفاده می‌کنم ولی بیت پین هم خوبه.,ارزهای دیجیتال,1004,2026-07-04
+اپلیکیشن شما سرعتش خیلی پایینه، لطفا کیفیت فنی اپ رو ارتقا بدید.,فنی,1005,2026-07-05
+بسته‌بندی کالا خراب بود و کالا آسیب دیده بود. فرآیند مرجوعی چطوریاست؟,مرجوعی کالا,1006,2026-07-06
+تخفیف‌های شما عالی هستند، خریدهای زیادی انجام دادم و کاملا راضی‌ام.,فروش,1007,2026-07-07
+پشتیبانی تلفنی خیلی دیر پاسخ میده ولی پشتیبانی آنلاین و پیگیری سریع شما عالیه.,پشتیبانی مشتری,1008,2026-07-08
+تتر و تون کوین سرعت انتقال خیلی بالایی دارند و کارمزدشون توی صرافی کوکوین کمتره.,ارزهای دیجیتال,1009,2026-07-09
+امکان پیگیری سفارشات در سایت خیلی دقیق و مفیده و به سرعت کار ما کمک می‌کنه.,فنی,1010,2026-07-10
+یک تیکت نمونه اضافی برای روز یازدهم جهت تست ترند تاریخ.,تست,1011,2026-07-11
+یک تیکت نمونه اضافی برای روز دوازدهم جهت تست ترند تاریخ.,تست,1012,2026-07-12`;
 
 const DEFAULT_WHITELIST_GROUPS: WhitelistGroup[] = [
   {
@@ -161,8 +181,53 @@ export const COLOR_PRESETS = [
   { id: 'cyan', name: 'فیروزه‌ای', hex: '#06b6d4', bgClass: 'bg-cyan-500', textClass: 'text-cyan-600 dark:text-cyan-400' },
 ];
 
+export const injectCustomColorStyle = (hex: string) => {
+  if (!hex || !hex.startsWith('#')) return;
+  const cleanHex = hex.replace('#', '');
+  const styleId = `custom-color-style-${cleanHex}`;
+  if (document.getElementById(styleId)) return;
+
+  const styleTag = document.createElement('style');
+  styleTag.id = styleId;
+  styleTag.innerHTML = `
+    .bg-${cleanHex} { background-color: ${hex} !important; }
+    .text-${cleanHex} { color: ${hex} !important; }
+    .border-${cleanHex} { border-color: ${hex} !important; }
+    .badge-${cleanHex} { background-color: ${hex}15 !important; color: ${hex} !important; border-color: ${hex}30 !important; }
+    .activeBg-${cleanHex} { background-color: ${hex}15 !important; border-color: ${hex}40 !important; }
+    .hoverBg-${cleanHex}:hover { background-color: ${hex}0a !important; }
+    .accentBadge-${cleanHex} { background-color: ${hex}15 !important; color: ${hex} !important; border-color: ${hex}40 !important; }
+    .button-${cleanHex} { background-color: ${hex} !important; color: #ffffff !important; }
+    .button-${cleanHex}:hover { filter: brightness(1.1) !important; }
+    .highlight-${cleanHex} { background-color: ${hex}15 !important; color: ${hex} !important; border-color: ${hex}30 !important; font-weight: 600; padding: 0.125rem 0.375rem; border-radius: 0.375rem; border-width: 1px; transition: all 0.2s; cursor: pointer; }
+    .highlight-${cleanHex}:hover { background-color: ${hex}30 !important; }
+  `;
+  document.head.appendChild(styleTag);
+};
+
 export const getGroupColorClasses = (colorId?: string) => {
-  switch (colorId) {
+  const activeColor = colorId || 'indigo';
+
+  if (activeColor.startsWith('#')) {
+    injectCustomColorStyle(activeColor);
+    const cleanHex = activeColor.replace('#', '');
+    return {
+      bg: `bg-${cleanHex}`,
+      text: `text-${cleanHex}`,
+      border: `border-${cleanHex}`,
+      badge: `badge-${cleanHex}`,
+      activeBg: `activeBg-${cleanHex}`,
+      hoverBg: `hoverBg-${cleanHex}`,
+      textLight: activeColor,
+      textDark: activeColor,
+      borderPulse: `focus:border-${cleanHex}`,
+      accentBadge: `accentBadge-${cleanHex}`,
+      buttonClass: `button-${cleanHex}`,
+      highlightSpan: `highlight-${cleanHex}`,
+    };
+  }
+
+  switch (activeColor) {
     case 'emerald':
       return {
         bg: 'bg-emerald-500',
@@ -257,12 +322,34 @@ export const getGroupColorClasses = (colorId?: string) => {
   }
 };
 
+const getDaysInMonth = (year: number, month: number) => {
+  if (month <= 6) return 31;
+  if (month <= 11) return 30;
+  // Year is leap check for Solar Hijri:
+  const leapYears = [1, 5, 9, 13, 17, 22, 26, 30];
+  const isLeap = leapYears.includes(year % 33);
+  return isLeap ? 30 : 29;
+};
+
 export default function App() {
   // State for CSV Data
   const [csvRawText, setCsvRawText] = useState<string>(DEFAULT_CSV_CONTENT);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [chatRows, setChatRows] = useState<ChatRow[]>([]);
   const [selectedTextColumn, setSelectedTextColumn] = useState<string>('');
+  
+  // Shamsi Date states for filtering
+  const [selectedDateColumn, setSelectedDateColumn] = useState<string>('');
+  const [isDateFilterEnabled, setIsDateFilterEnabled] = useState<boolean>(false);
+  
+  // Shamsi Date Picker Range (From 1405/04/01 to 1405/04/12 by default for sample dataset)
+  const [shamsiStartYear, setShamsiStartYear] = useState<number>(1405);
+  const [shamsiStartMonth, setShamsiStartMonth] = useState<number>(4);
+  const [shamsiStartDay, setShamsiStartDay] = useState<number>(1);
+  
+  const [shamsiEndYear, setShamsiEndYear] = useState<number>(1405);
+  const [shamsiEndMonth, setShamsiEndMonth] = useState<number>(4);
+  const [shamsiEndDay, setShamsiEndDay] = useState<number>(12);
   
   // UI and Sorting States
   const [isFullTableExpanded, setIsFullTableExpanded] = useState<boolean>(false);
@@ -279,9 +366,39 @@ export default function App() {
     }
   };
 
+  // 1. Process all chat rows to parse dates and map to Shamsi
+  const processedChatRows = useMemo(() => {
+    return chatRows.map(row => {
+      let rawDateStr = selectedDateColumn ? row.data[selectedDateColumn] : '';
+      let jalaliDate = rawDateStr ? parseAndConvertToJalali(rawDateStr) : null;
+      return {
+        ...row,
+        jalaliDate,
+        formattedJalali: jalaliDate ? formatJalali(jalaliDate) : 'نامشخص'
+      };
+    });
+  }, [chatRows, selectedDateColumn]);
+
+  // 2. Filter processed chat rows based on Shamsi date range if enabled
+  const activeFilteredChatRows = useMemo(() => {
+    if (!isDateFilterEnabled || !selectedDateColumn) {
+      return processedChatRows;
+    }
+    
+    const startDateObj = { jy: shamsiStartYear, jm: shamsiStartMonth, jd: shamsiStartDay };
+    const endDateObj = { jy: shamsiEndYear, jm: shamsiEndMonth, jd: shamsiEndDay };
+    
+    return processedChatRows.filter(row => {
+      if (!row.jalaliDate) return false;
+      const cmpStart = compareJalali(row.jalaliDate, startDateObj);
+      const cmpEnd = compareJalali(row.jalaliDate, endDateObj);
+      return cmpStart >= 0 && cmpEnd <= 0;
+    });
+  }, [processedChatRows, isDateFilterEnabled, selectedDateColumn, shamsiStartYear, shamsiStartMonth, shamsiStartDay, shamsiEndYear, shamsiEndMonth, shamsiEndDay]);
+
   const sortedChatRows = useMemo(() => {
-    if (!sortColumn) return chatRows;
-    return [...chatRows].sort((a, b) => {
+    if (!sortColumn) return activeFilteredChatRows;
+    return [...activeFilteredChatRows].sort((a, b) => {
       const valA = (a.data[sortColumn] || '').toString();
       const valB = (b.data[sortColumn] || '').toString();
       
@@ -295,7 +412,7 @@ export default function App() {
         ? valA.localeCompare(valB, 'fa', { sensitivity: 'base' })
         : valB.localeCompare(valA, 'fa', { sensitivity: 'base' });
     });
-  }, [chatRows, sortColumn, sortDirection]);
+  }, [activeFilteredChatRows, sortColumn, sortDirection]);
   
   // Theme support
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -447,7 +564,7 @@ export default function App() {
     const groupWords = appliedSelectedGroup.words.map(w => w.word.trim().toLowerCase()).filter(Boolean);
     if (groupWords.length === 0) return [];
 
-    const rawMatches = chatRows.filter(row => {
+    const rawMatches = activeFilteredChatRows.filter(row => {
       const text = (row.text || '').toLowerCase();
       return groupWords.some(word => text.includes(word));
     });
@@ -464,7 +581,7 @@ export default function App() {
     });
 
     return uniqueMatches;
-  }, [chatRows, appliedSelectedGroup]);
+  }, [activeFilteredChatRows, appliedSelectedGroup]);
 
   // Track if there are pending modifications not yet rendered in the word cloud
   const hasPendingChanges = useMemo(() => {
@@ -690,6 +807,27 @@ export default function App() {
 
       setSelectedTextColumn(detectedCol);
       
+      // Automatically detect the date column
+      const dateKeywords = ['تاریخ', 'زمان', 'date', 'time', 'created', 'at', 'timestamp'];
+      let detectedDateCol = '';
+      const foundDateCol = headers.find(header => 
+        dateKeywords.some(keyword => header.toLowerCase().includes(keyword.toLowerCase()))
+      );
+      if (foundDateCol) {
+        detectedDateCol = foundDateCol;
+      } else {
+        // Fallback: search if any column values look like a date (e.g. contain dashes/slashes)
+        const datePattern = /^[0-9]{4}[-/][0-9]{2}[-/][0-9]{2}/;
+        for (const header of headers) {
+          const sampleValue = parsedRows[0]?.data[header] || '';
+          if (datePattern.test(sampleValue.trim())) {
+            detectedDateCol = header;
+            break;
+          }
+        }
+      }
+      setSelectedDateColumn(detectedDateCol);
+      
       // Complete text mapping
       const finalizedRows = parsedRows.map(row => ({
         ...row,
@@ -865,7 +1003,7 @@ export default function App() {
     const groupWords = selectedGroup.words.map(w => w.word.trim().toLowerCase()).filter(Boolean);
     if (groupWords.length === 0) return [];
 
-    const rawMatches = chatRows.filter(row => {
+    const rawMatches = activeFilteredChatRows.filter(row => {
       const text = (row.text || '').toLowerCase();
       return groupWords.some(word => text.includes(word));
     });
@@ -883,7 +1021,7 @@ export default function App() {
     });
 
     return uniqueMatches;
-  }, [chatRows, selectedGroup]);
+  }, [activeFilteredChatRows, selectedGroup]);
 
   // Legacy PERSIAN_STOP_WORDS removed to use customizable stopWordsSet state instead.
 
@@ -910,7 +1048,7 @@ export default function App() {
     });
 
     // Match keywords in chats
-    chatRows.forEach(row => {
+    activeFilteredChatRows.forEach(row => {
       const chatText = row.text || '';
 
       groupWords.forEach(item => {
@@ -942,17 +1080,17 @@ export default function App() {
     });
 
     return {
-      totalChats: chatRows.length,
+      totalChats: activeFilteredChatRows.length,
       matchedChatsCount,
       wordFrequencies,
       wordDetails
     };
-  }, [chatRows, selectedGroup, chatsMatchingSelectedGroup]);
+  }, [activeFilteredChatRows, selectedGroup, chatsMatchingSelectedGroup]);
 
   // Synchronize JSON mode
   // Generates the word cloud from ALL words in the chats related to the selected whitelist group (or ALL chats if toggled), excluding stop words
   const wordCloudDataArray = useMemo<WordMetadata[]>(() => {
-    const targetChats = wordCloudUseAllChats ? chatRows : appliedChatsMatchingSelectedGroup;
+    const targetChats = wordCloudUseAllChats ? activeFilteredChatRows : appliedChatsMatchingSelectedGroup;
     if (targetChats.length === 0) {
       return [];
     }
@@ -1021,7 +1159,7 @@ export default function App() {
     });
 
     return sortedCandidates;
-  }, [appliedChatsMatchingSelectedGroup, chatRows, wordCloudUseAllChats, appliedStopWordsSet, whitelistGroups]);
+  }, [appliedChatsMatchingSelectedGroup, activeFilteredChatRows, wordCloudUseAllChats, appliedStopWordsSet, whitelistGroups]);
 
   // Synchronize the textarea when analysis values change so JSON mode has latest
   useEffect(() => {
@@ -1098,13 +1236,13 @@ export default function App() {
     if (!selectedWordMetadata) return [];
     
     // Find all rows that match the chatIndices of the selected word
-    const matchingRows = chatRows.filter(row => selectedWordMetadata.chatIndices.includes(row.id));
+    const matchingRows = activeFilteredChatRows.filter(row => selectedWordMetadata.chatIndices.includes(row.id));
     
     // Extract real Chat IDs and deduplicate them
     const chatIds = matchingRows.map(row => getChatId(row));
     const uniqueSet = new Set<string>(chatIds);
     return Array.from(uniqueSet).filter((id: string) => id && id.trim().length > 0);
-  }, [selectedWordMetadata, chatRows]);
+  }, [selectedWordMetadata, activeFilteredChatRows]);
 
   // Filtered chats lists
   const matchedChatsList = useMemo(() => {
@@ -1169,6 +1307,55 @@ export default function App() {
     return <div dangerouslySetInnerHTML={{ __html: highlighted }} className="leading-relaxed text-sm text-slate-700 dark:text-slate-300" />;
   };
 
+  // Generate dynamic daily trend data for the selected Shamsi date range
+  const trendData = useMemo(() => {
+    if (!selectedDateColumn || processedChatRows.length === 0) {
+      return [];
+    }
+
+    try {
+      const startMiladi = jalaliToGregorian(shamsiStartYear, shamsiStartMonth, shamsiStartDay);
+      const endMiladi = jalaliToGregorian(shamsiEndYear, shamsiEndMonth, shamsiEndDay);
+
+      const daysList: { jalaliStr: string; label: string; count: number }[] = [];
+
+      // Generate sequence of days (limiting to max 100 days to prevent infinite loops)
+      let currentMiladi = new Date(startMiladi);
+      let safetyCounter = 0;
+      
+      while (currentMiladi <= endMiladi && safetyCounter < 100) {
+        const jd = gregorianToJalali(currentMiladi.getFullYear(), currentMiladi.getMonth() + 1, currentMiladi.getDate());
+        const jalaliStr = formatJalali(jd);
+        const label = `${PERS_MONTH_NAMES[jd.jm - 1]} ${jd.jd}`;
+        daysList.push({ jalaliStr, label, count: 0 });
+        
+        // Increment day
+        currentMiladi.setDate(currentMiladi.getDate() + 1);
+        safetyCounter++;
+      }
+
+      if (daysList.length === 0) {
+        return [];
+      }
+
+      // Count chats for each day in our range
+      processedChatRows.forEach(row => {
+        if (row.jalaliDate) {
+          const rowJalaliStr = formatJalali(row.jalaliDate);
+          const dayNode = daysList.find(d => d.jalaliStr === rowJalaliStr);
+          if (dayNode) {
+            dayNode.count += 1;
+          }
+        }
+      });
+
+      return daysList;
+    } catch (e) {
+      console.error("Error generating trendData:", e);
+      return [];
+    }
+  }, [processedChatRows, selectedDateColumn, shamsiStartYear, shamsiStartMonth, shamsiStartDay, shamsiEndYear, shamsiEndMonth, shamsiEndDay]);
+
   // Drag and drop handlers for CSV upload
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1216,6 +1403,43 @@ export default function App() {
 
   const handleWordSelect = useCallback((word: WordMetadata) => {
     setSelectedWordMetadata(word);
+  }, []);
+
+  const handleDirectAddWordToStopWords = useCallback((wordText: string) => {
+    setStopWords(prev => {
+      const lower = wordText.toLowerCase();
+      if (prev.includes(lower)) return prev;
+      return [...prev, lower];
+    });
+    setSelectedWordMetadata(prev => {
+      if (prev && prev.text.toLowerCase() === wordText.toLowerCase()) {
+        return null;
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleDirectAddWordToWhitelist = useCallback((wordText: string, groupId: string) => {
+    if (!groupId) return;
+    setWhitelistGroups(prev => prev.map(g => {
+      if (g.id === groupId) {
+        const existingWords = new Set(g.words.map(w => w.word.toLowerCase()));
+        if (!existingWords.has(wordText.toLowerCase())) {
+          return {
+            ...g,
+            words: [
+              ...g.words,
+              {
+                id: `w-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                word: wordText,
+                createdAt: Date.now()
+              }
+            ]
+          };
+        }
+      }
+      return g;
+    }));
   }, []);
 
   return (
@@ -1540,22 +1764,50 @@ export default function App() {
                       </button>
                     </div>
                     {/* Inline Color Selection Row */}
-                    <div className="flex items-center gap-2 pr-1">
-                      <span className="text-[10px] text-slate-400 font-bold">انتخاب رنگ لیست:</span>
-                      <div className="flex items-center gap-1.5">
-                        {COLOR_PRESETS.map(preset => {
-                          const isSelected = newGroupColor === preset.id;
-                          return (
-                            <button
-                              key={preset.id}
-                              onClick={() => setNewGroupColor(preset.id)}
-                              className={`w-4 h-4 rounded-full ${preset.bgClass} cursor-pointer transition-all hover:scale-115 flex items-center justify-center shrink-0 ${
-                                isSelected ? 'ring-2 ring-offset-2 ring-indigo-500 dark:ring-offset-slate-950 scale-110' : 'opacity-70 hover:opacity-100'
-                              }`}
-                              title={preset.name}
-                            />
-                          );
-                        })}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pr-1" style={{ direction: 'rtl' }}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-bold">رنگ لیست:</span>
+                        <div className="flex items-center gap-1.5">
+                          {COLOR_PRESETS.map(preset => {
+                            const isSelected = newGroupColor === preset.id;
+                            return (
+                              <button
+                                key={preset.id}
+                                onClick={() => setNewGroupColor(preset.id)}
+                                className={`w-4 h-4 rounded-full ${preset.bgClass} cursor-pointer transition-all hover:scale-115 flex items-center justify-center shrink-0 ${
+                                  isSelected ? 'ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-slate-950 scale-110' : 'opacity-70 hover:opacity-100'
+                                }`}
+                                title={preset.name}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Custom Color Picker Button */}
+                      <div className="flex items-center gap-1.5 border-t sm:border-t-0 sm:border-r pt-1.5 sm:pt-0 sm:pr-2 dark:border-slate-800 border-slate-100 shrink-0">
+                        <span className="text-[9px] text-slate-400 font-medium">رنگ سفارشی:</span>
+                        <div className="relative flex items-center justify-center w-5 h-5 rounded-md border border-slate-300 dark:border-slate-700 overflow-hidden cursor-pointer shadow-xs transition-transform hover:scale-105 shrink-0">
+                          <input
+                            type="color"
+                            value={newGroupColor.startsWith('#') ? newGroupColor : '#6366f1'}
+                            onChange={(e) => setNewGroupColor(e.target.value)}
+                            className="absolute inset-0 w-full h-full p-0 border-0 opacity-0 cursor-pointer"
+                            title="انتخاب رنگ سفارشی"
+                          />
+                          <div 
+                            className="w-full h-full rounded-md transition-colors"
+                            style={{ 
+                              backgroundColor: newGroupColor.startsWith('#') ? newGroupColor : '#6366f1',
+                              backgroundImage: !newGroupColor.startsWith('#') ? 'linear-gradient(135deg, #6366f1, #10b981, #f59e0b, #f43f5e)' : 'none'
+                            }} 
+                          />
+                        </div>
+                        {newGroupColor.startsWith('#') && (
+                          <span className="text-[9px] font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-1 py-0.5 rounded leading-none shrink-0" style={{ direction: 'ltr' }}>
+                            {newGroupColor.toUpperCase()}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1571,7 +1823,7 @@ export default function App() {
                           onClick={() => setSelectedGroupId(g.id)}
                           className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition-all ${
                             isSelected 
-                              ? (isDarkMode ? `${cl.activeBg} border-${g.color || 'indigo'}-500/40 shadow-xs` : `${cl.activeBg} border-${g.color || 'indigo'}-200 shadow-xs`) 
+                              ? `${cl.activeBg} ${g.color?.startsWith('#') ? cl.border : (isDarkMode ? `border-${g.color || 'indigo'}-500/40` : `border-${g.color || 'indigo'}-200`)} shadow-xs` 
                               : (isDarkMode ? 'bg-slate-950/40 border-slate-800/80 hover:bg-slate-900/60' : 'bg-white border-slate-200 hover:bg-slate-50')
                           }`}
                         >
@@ -1972,6 +2224,10 @@ export default function App() {
               onWordClick={handleWordSelect} 
               selectedWord={selectedWordMetadata}
               isDarkMode={isDarkMode}
+              whitelistGroups={whitelistGroups}
+              selectedGroupId={selectedGroupId}
+              onAddToStopWords={handleDirectAddWordToStopWords}
+              onAddToWhitelist={handleDirectAddWordToWhitelist}
             />
           </div>
 

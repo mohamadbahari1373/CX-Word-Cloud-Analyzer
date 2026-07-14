@@ -3,19 +3,57 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, memo } from 'react';
+import React, { useMemo, memo, useState, useEffect } from 'react';
 import ReactWordcloud from 'react-wordcloud';
-import { WordMetadata } from '../types';
-import { Download } from 'lucide-react';
+import { WordMetadata, WhitelistGroup } from '../types';
+import { Download, Plus, EyeOff, Sparkles, Maximize2, Minimize2 } from 'lucide-react';
 
 interface WordCloudProps {
   words: WordMetadata[];
   onWordClick: (word: WordMetadata) => void;
   selectedWord: WordMetadata | null;
   isDarkMode?: boolean;
+  whitelistGroups: WhitelistGroup[];
+  selectedGroupId: string;
+  onAddToStopWords: (word: string) => void;
+  onAddToWhitelist: (word: string, groupId: string) => void;
 }
 
-function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: WordCloudProps) {
+function WordCloud({ 
+  words, 
+  onWordClick, 
+  selectedWord, 
+  isDarkMode = false,
+  whitelistGroups = [],
+  selectedGroupId = '',
+  onAddToStopWords,
+  onAddToWhitelist
+}: WordCloudProps) {
+  const [hoveredWord, setHoveredWord] = useState<WordMetadata | null>(null);
+  const [targetGroupId, setTargetGroupId] = useState<string>('');
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Toggle body scroll during fullscreen
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isFullscreen]);
+
+  // Sync default or active group ID
+  useEffect(() => {
+    if (selectedGroupId) {
+      setTargetGroupId(selectedGroupId);
+    } else if (whitelistGroups && whitelistGroups.length > 0) {
+      setTargetGroupId(whitelistGroups[0].id);
+    }
+  }, [selectedGroupId, whitelistGroups]);
+
   // Sort and limit to top 50 words to keep layout clean and readable
   const processedWords = useMemo(() => {
     return [...words]
@@ -41,6 +79,7 @@ function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: Wor
     scale: "sqrt" as const,
     spiral: "archimedean" as const,
     transitionDuration: 400,
+    enableTooltip: false,
   }), []);
 
   // Customized callbacks for color, tooltip, and interactive clicks
@@ -60,14 +99,14 @@ function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: Wor
         const ratio = (word.value - minCount) / sizeRange;
 
         if (isSelected) {
-          if (word.groupColor && colorHexMap[word.groupColor]) {
-            return colorHexMap[word.groupColor];
+          if (word.groupColor) {
+            return colorHexMap[word.groupColor] || word.groupColor;
           }
           return isDarkMode ? '#38BDF8' : '#0057D9'; // Bright highlighting for selected
         }
 
-        if (word.groupColor && colorHexMap[word.groupColor]) {
-          return colorHexMap[word.groupColor];
+        if (word.groupColor) {
+          return colorHexMap[word.groupColor] || word.groupColor;
         }
 
         if (isDarkMode) {
@@ -92,6 +131,15 @@ function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: Wor
         if (matched) {
           onWordClick(matched);
         }
+      },
+      onWordMouseEnter: (word: any) => {
+        const matched = words.find(w => w.text === word.text);
+        if (matched) {
+          setHoveredWord(matched);
+        }
+      },
+      onWordMouseLeave: () => {
+        setHoveredWord(null);
       }
     };
   }, [processedWords, selectedWord, isDarkMode, minCount, sizeRange, words, onWordClick]);
@@ -186,54 +234,179 @@ function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: Wor
     image.src = blobURL;
   };
 
+  const activeWord = useMemo(() => {
+    return hoveredWord || selectedWord;
+  }, [hoveredWord, selectedWord]);
+
   return (
     <div
-      id="word-cloud-container"
-      className={`relative w-full h-[400px] border rounded-xl overflow-hidden flex items-center justify-center transition-all duration-300 shadow-sm ${
+      className={`w-full overflow-hidden flex flex-col transition-all duration-300 shadow-sm ${
+        isFullscreen
+          ? 'fixed inset-0 z-50 p-6 h-screen w-screen rounded-none border-none'
+          : 'border rounded-xl'
+      } ${
         isDarkMode 
-          ? 'bg-slate-900/40 border-slate-800' 
+          ? 'bg-slate-900 border-slate-800' 
           : 'bg-white border-slate-200'
       }`}
     >
-      {/* Background Graphic Grid Rings and Axes */}
-      <div className="absolute inset-0 pointer-events-none select-none">
-        <svg
-          width="100%"
-          height="100%"
-          className="w-full h-full"
-        >
-          <g opacity={isDarkMode ? '0.08' : '0.04'}>
-            <circle cx="50%" cy="50%" r="80" fill="none" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
-            <circle cx="50%" cy="50%" r="160" fill="none" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
-            <circle cx="50%" cy="50%" r="240" fill="none" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
-            <line x1="0" y1="50%" x2="100%" y2="50%" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
-            <line x1="50%" y1="0" x2="50%" y2="100%" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
-          </g>
-        </svg>
-      </div>
+      {/* Top Header / Control & Inspector bar */}
+      <div 
+        className={`px-4 py-3 border-b flex flex-col md:flex-row-reverse md:items-center md:justify-between gap-3 transition-all ${
+          isDarkMode ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50/80 border-slate-100'
+        }`}
+      >
+        {/* Real-time word inspector & actions */}
+        <div className="flex-grow flex items-center justify-between md:justify-start gap-3 flex-wrap" style={{ direction: 'rtl' }}>
+          {activeWord ? (
+            <div className="flex items-center gap-3 flex-wrap animate-fade-in">
+              {/* Direct Quick Actions */}
+              <div className="flex items-center gap-3 flex-wrap">
+                {whitelistGroups.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-bold shrink-0">
+                      دسته‌بندی کلمه <span className="text-indigo-600 dark:text-indigo-400 font-black">«{activeWord.text}»</span> در:
+                    </span>
+                    <select
+                      value={targetGroupId}
+                      onChange={(e) => setTargetGroupId(e.target.value)}
+                      className={`text-xs px-2.5 py-1 rounded-md border bg-transparent font-medium cursor-pointer max-w-[150px] truncate outline-none transition-all focus:ring-2 focus:ring-indigo-500/20 ${
+                        isDarkMode 
+                          ? 'border-slate-700 text-slate-200 bg-slate-900 hover:border-slate-600 focus:border-indigo-500' 
+                          : 'border-slate-200 text-slate-700 bg-white hover:border-slate-300 focus:border-indigo-500'
+                      }`}
+                    >
+                      {whitelistGroups.map(g => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-      {processedWords.length === 0 ? (
-        <div className={`text-center p-6 font-sans z-10 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-          <p className="text-sm">داده‌ای برای نمایش در ابرکلمات وجود ندارد.</p>
-          <p className="text-xs mt-1">کلمات کلیدی لیست سفید را تعریف کرده یا فایل CSV حاوی گفتگوها را آپلود کنید.</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onAddToWhitelist(activeWord.text, targetGroupId)}
+                    className="py-1 px-3 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
+                    title="افزودن مستقیم کلمه به لیست سفید"
+                  >
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                    <span>افزودن به سفید</span>
+                  </button>
+                  <button
+                    onClick={() => onAddToStopWords(activeWord.text)}
+                    className="py-1 px-3 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
+                    title="حذف کلمه از ابرکلمات"
+                  >
+                    <EyeOff className="w-3.5 h-3.5 shrink-0" />
+                    <span>افزودن به استاپ</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 py-1 select-none text-slate-400 dark:text-slate-500">
+              <Sparkles className="w-4 h-4 text-amber-500/80 animate-pulse shrink-0" />
+              <span className="text-xs font-medium leading-none">
+                برای مدیریت سریع و دسته‌بندی کلمات، روی یک کلمه در ابرکلمات کلیک کنید یا ماوس خود را روی آن نگه دارید.
+              </span>
+            </div>
+          )}
         </div>
-      ) : (
-        <>
+
+        {/* Controls Container */}
+        <div className="flex items-center gap-2 shrink-0 self-start md:self-auto">
+          {/* Fullscreen toggle button */}
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs active:scale-95 ${
+              isDarkMode 
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 hover:border-slate-600' 
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'
+            }`}
+            title={isFullscreen ? 'خروج از تمام‌صفحه' : 'نمایش تمام‌صفحه'}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span>خروج از تمام‌صفحه</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span>تمام‌صفحه</span>
+              </>
+            )}
+          </button>
+
           {/* High quality PNG export trigger */}
           <button
             onClick={handleExportPNG}
-            className={`absolute top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shadow-xs active:scale-95 ${
               isDarkMode 
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700' 
-                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 hover:border-slate-600' 
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'
             }`}
             title="دانلود به عنوان تصویر PNG"
           >
-            <Download className="w-3.5 h-3.5 text-[#0057D9]" />
+            <Download className="w-3.5 h-3.5 text-[#0057D9] shrink-0" />
             <span>خروجی تصویر PNG</span>
           </button>
+        </div>
+      </div>
 
-          <div className="w-full h-full relative z-10 p-4">
+      {/* Main Word Cloud Viewport Area */}
+      <div
+        id="word-cloud-container"
+        className={`relative w-full overflow-hidden flex items-center justify-center transition-all ${
+          isFullscreen ? 'h-[calc(100vh-160px)] md:h-[calc(100vh-120px)]' : 'h-[360px]'
+        }`}
+      >
+        {/* Background Graphic Grid Rings and Axes */}
+        <div className="absolute inset-0 pointer-events-none select-none">
+          <svg
+            width="100%"
+            height="100%"
+            className="w-full h-full"
+          >
+            <g opacity={isDarkMode ? '0.08' : '0.04'}>
+              <circle cx="50%" cy="50%" r="80" fill="none" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
+              <circle cx="50%" cy="50%" r="160" fill="none" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
+              <circle cx="50%" cy="50%" r="240" fill="none" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
+              <line x1="0" y1="50%" x2="100%" y2="50%" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
+              <line x1="50%" y1="0" x2="50%" y2="100%" stroke={isDarkMode ? '#38BDF8' : '#0057D9'} strokeWidth="1" />
+            </g>
+          </svg>
+        </div>
+
+        {/* Hovered/Selected Word Detail Indicator (Top Right) */}
+        {activeWord && (
+          <div 
+            className={`absolute top-4 right-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-lg border shadow-sm backdrop-blur-md transition-all duration-300 transform translate-y-0 scale-100 ${
+              isDarkMode 
+                ? 'bg-slate-900/90 border-slate-800 text-slate-200' 
+                : 'bg-white/95 border-slate-200 text-slate-800'
+            }`}
+            style={{ direction: 'rtl' }}
+          >
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">کلمه:</span>
+            <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 dark:bg-indigo-500/20 px-2 py-0.5 rounded">
+              {activeWord.text}
+            </span>
+            <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-800" />
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">تعداد تکرار:</span>
+            <span className="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/20 px-1.5 py-0.5 rounded font-mono">
+              {activeWord.value}
+            </span>
+          </div>
+        )}
+
+        {processedWords.length === 0 ? (
+          <div className={`text-center p-6 font-sans z-10 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p className="text-sm">داده‌ای برای نمایش در ابرکلمات وجود ندارد.</p>
+            <p className="text-xs mt-1">کلمات کلیدی لیست سفید را تعریف کرده یا فایل CSV حاوی گفتگوها را آپلود کنید.</p>
+          </div>
+        ) : (
+          <div className="w-full h-full relative z-10 p-4" key={isFullscreen ? 'fullscreen' : 'normal'}>
             <ReactWordcloud
               words={processedWords}
               options={options}
@@ -241,22 +414,22 @@ function WordCloud({ words, onWordClick, selectedWord, isDarkMode = false }: Wor
               minSize={[300, 300]}
             />
           </div>
-        </>
-      )}
+        )}
 
-      {/* Floating Legend / Information Banner */}
-      <div className={`absolute bottom-3 right-3 left-3 flex justify-between items-center text-[10px] font-mono pointer-events-none z-20 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-        <span>ابرکلمات تعاملی با کتابخانه react-wordcloud (تراز ۰ درجه)</span>
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1">
-            <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#F8FAFC]' : 'bg-[#0F172A]'}`} /> تکرار بالا
-          </span>
-          <span className="flex items-center gap-1">
-            <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#38BDF8]' : 'bg-[#2563EB]'}`} /> تکرار متوسط
-          </span>
-          <span className="flex items-center gap-1">
-            <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#94A3B8]' : 'bg-[#94A3B8]'}`} /> تکرار کم
-          </span>
+        {/* Floating Legend / Information Banner */}
+        <div className={`absolute bottom-3 right-3 left-3 flex justify-between items-center text-[9px] font-mono pointer-events-none z-20 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+          <span>ابرکلمات تعاملی با کتابخانه react-wordcloud (تراز ۰ درجه)</span>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#F8FAFC]' : 'bg-[#0F172A]'}`} /> تکرار بالا
+            </span>
+            <span className="flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#38BDF8]' : 'bg-[#2563EB]'}`} /> تکرار متوسط
+            </span>
+            <span className="flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#94A3B8]' : 'bg-[#94A3B8]'}`} /> تکرار کم
+            </span>
+          </div>
         </div>
       </div>
     </div>
