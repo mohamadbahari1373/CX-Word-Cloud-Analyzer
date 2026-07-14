@@ -303,14 +303,7 @@ function WordCloud({
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="flex items-center gap-2 py-1 select-none text-slate-400 dark:text-slate-500">
-              <Sparkles className="w-4 h-4 text-amber-500/80 animate-pulse shrink-0" />
-              <span className="text-xs font-medium leading-none">
-                برای مدیریت سریع و دسته‌بندی کلمات، روی یک کلمه در ابرکلمات کلیک کنید یا ماوس خود را روی آن نگه دارید.
-              </span>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Controls Container */}
