@@ -1742,12 +1742,11 @@ export default function App() {
                   if (wordCloudUseAllChats) {
                     return activeCloudWords.reduce((sum, item) => sum + item.value, 0);
                   } else {
-                    const selectedGroupWordTexts = selectedGroup
-                      ? selectedGroup.words.map(w => w.word.trim().toLowerCase())
-                      : [];
-                    return activeCloudWords
-                      .filter(item => selectedGroupWordTexts.includes(item.text.toLowerCase()))
-                      .reduce((sum, item) => sum + item.value, 0);
+                    const groupWords = selectedGroup ? selectedGroup.words : [];
+                    return groupWords.reduce((sum, wordObj) => {
+                      const freq = analysisResult.wordFrequencies[wordObj.word] || 0;
+                      return sum + freq;
+                    }, 0);
                   }
                 })()} مرتبه
               </h3>
