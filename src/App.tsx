@@ -1180,7 +1180,7 @@ export default function App() {
     });
 
     return sortedCandidates;
-  }, [appliedChatsMatchingSelectedGroup, activeFilteredChatRows, wordCloudUseAllChats, appliedStopWordsSet, whitelistGroups]);
+  }, [appliedChatsMatchingSelectedGroup, activeFilteredChatRows, wordCloudUseAllChats, appliedStopWordsSet, whitelistGroups, selectedGroup]);
 
   // Synchronize the textarea when analysis values change so JSON mode has latest
   useEffect(() => {
@@ -1738,10 +1738,18 @@ export default function App() {
                 {wordCloudUseAllChats ? 'کل تکرار تمامی کلمات کلیدی' : 'کل تکرار کلمات لیست منتخب'}
               </p>
               <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                {wordCloudUseAllChats 
-                  ? activeCloudWords.reduce((sum, item) => sum + item.value, 0)
-                  : (Object.values(analysisResult.wordFrequencies) as number[]).reduce((sum, val) => sum + val, 0)
-                } مرتبه
+                {(() => {
+                  if (wordCloudUseAllChats) {
+                    return activeCloudWords.reduce((sum, item) => sum + item.value, 0);
+                  } else {
+                    const selectedGroupWordTexts = selectedGroup
+                      ? selectedGroup.words.map(w => w.word.trim().toLowerCase())
+                      : [];
+                    return activeCloudWords
+                      .filter(item => selectedGroupWordTexts.includes(item.text.toLowerCase()))
+                      .reduce((sum, item) => sum + item.value, 0);
+                  }
+                })()} مرتبه
               </h3>
             </div>
           </div>
