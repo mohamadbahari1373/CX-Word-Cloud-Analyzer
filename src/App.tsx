@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toPng } from 'html-to-image';
+import * as XLSX from 'xlsx';
 import { ChatRow, WhitelistWord, WhitelistGroup, WordMetadata, AnalysisResult } from './types';
 import WordCloud from './components/WordCloud';
 import { 
@@ -1396,7 +1397,10 @@ export default function App() {
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
-      if (file.type === "text/csv" || file.name.endsWith('.csv')) {
+      const lowerName = file.name.toLowerCase();
+      const isCsv = file.type === "text/csv" || lowerName.endsWith('.csv');
+      const isExcel = lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls') || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.type === 'application/vnd.ms-excel';
+      if (isCsv || isExcel) {
         handleFileRead(file);
       }
     }
@@ -1410,13 +1414,35 @@ export default function App() {
   };
 
   const handleFileRead = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target && typeof event.target.result === 'string') {
-        setCsvRawText(event.target.result);
-      }
-    };
-    reader.readAsText(file, 'UTF-8');
+    const lowerName = file.name.toLowerCase();
+    const isExcel = lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls');
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = event.target?.result;
+          if (data) {
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const csvText = XLSX.utils.sheet_to_csv(worksheet);
+            setCsvRawText(csvText);
+          }
+        } catch (error) {
+          console.error("Error reading Excel file:", error);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target && typeof event.target.result === 'string') {
+          setCsvRawText(event.target.result);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
   };
 
   const triggerCopy = (text: string, label: string) => {
@@ -1546,13 +1572,13 @@ export default function App() {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileInputChange}
-                  accept=".csv"
+                  accept=".csv, .xlsx, .xls"
                   className="hidden"
                 />
                 <div className="flex items-center gap-2">
                   <Upload className="w-4 h-4 text-[#0057D9] shrink-0 animate-bounce" />
                   <div className="text-right">
-                    <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>بارگذاری فایل CSV گفتگوها</h4>
+                    <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>بارگذاری فایل CSV یا Excel گفتگوها</h4>
                     <p className={`text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>فایل را اینجا رها کنید یا برای انتخاب کلیک کنید</p>
                   </div>
                 </div>
