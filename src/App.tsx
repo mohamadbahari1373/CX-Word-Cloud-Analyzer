@@ -1732,9 +1732,14 @@ export default function App() {
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">کل تکرار کلمات لیست منتخب</p>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                {wordCloudUseAllChats ? 'کل تکرار تمامی کلمات کلیدی' : 'کل تکرار کلمات لیست منتخب'}
+              </p>
               <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                {(Object.values(analysisResult.wordFrequencies) as number[]).reduce((sum, val) => sum + val, 0)} مرتبه
+                {wordCloudUseAllChats 
+                  ? activeCloudWords.reduce((sum, item) => sum + item.value, 0)
+                  : (Object.values(analysisResult.wordFrequencies) as number[]).reduce((sum, val) => sum + val, 0)
+                } مرتبه
               </h3>
             </div>
           </div>
