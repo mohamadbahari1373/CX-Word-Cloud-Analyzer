@@ -17,6 +17,7 @@ interface WordCloudProps {
   selectedGroupId: string;
   onAddToStopWords: (word: string) => void;
   onAddToWhitelist: (word: string, groupId: string) => void;
+  language?: 'fa' | 'en';
 }
 
 function WordCloud({ 
@@ -27,11 +28,14 @@ function WordCloud({
   whitelistGroups = [],
   selectedGroupId = '',
   onAddToStopWords,
-  onAddToWhitelist
+  onAddToWhitelist,
+  language = 'fa'
 }: WordCloudProps) {
   const [hoveredWord, setHoveredWord] = useState<WordMetadata | null>(null);
   const [targetGroupId, setTargetGroupId] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  const t = (fa: string, en: string) => language === 'fa' ? fa : en;
 
   // Toggle body scroll during fullscreen
   useEffect(() => {
@@ -122,8 +126,8 @@ function WordCloud({
         }
       },
       getWordTooltip: (word: any) => {
-        const groupInfo = word.groupName ? ` | لیست: ${word.groupName}` : '';
-        return `کلمه: ${word.text} | تعداد تکرار: ${word.value}${groupInfo}`;
+        const groupInfo = word.groupName ? ` | ${language === 'fa' ? 'لیست' : 'List'}: ${word.groupName}` : '';
+        return `${language === 'fa' ? 'کلمه' : 'Word'}: ${word.text} | ${language === 'fa' ? 'تعداد تکرار' : 'Occurrence count'}: ${word.value}${groupInfo}`;
       },
       onWordClick: (word: any) => {
         // Find the original WordMetadata reference and trigger callback
@@ -142,7 +146,7 @@ function WordCloud({
         setHoveredWord(null);
       }
     };
-  }, [processedWords, selectedWord, isDarkMode, minCount, sizeRange, words, onWordClick]);
+  }, [processedWords, selectedWord, isDarkMode, minCount, sizeRange, words, onWordClick, language]);
 
   // Export word cloud SVG to PNG image
   const handleExportPNG = () => {
@@ -154,7 +158,7 @@ function WordCloud({
     if (!wordcloudDiv) return;
     const svgElement = wordcloudDiv.querySelector('svg');
     if (!svgElement) {
-      alert('خطا: المان گرافیکی ابرکلمات یافت نشد.');
+      alert(t('خطا: المان گرافیکی ابرکلمات یافت نشد.', 'Error: Word cloud graphic element not found.'));
       return;
     }
 
@@ -257,7 +261,7 @@ function WordCloud({
         }`}
       >
         {/* Real-time word inspector & actions */}
-        <div className="flex-grow flex items-center justify-between md:justify-start gap-3 flex-wrap" style={{ direction: 'rtl' }}>
+        <div className="flex-grow flex items-center justify-between md:justify-start gap-3 flex-wrap" style={{ direction: language === 'fa' ? 'rtl' : 'ltr' }}>
           {activeWord ? (
             <div className="flex items-center gap-3 flex-wrap animate-fade-in">
               {/* Direct Quick Actions */}
@@ -265,7 +269,7 @@ function WordCloud({
                 {whitelistGroups.length > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-bold shrink-0">
-                      دسته‌بندی کلمه <span className="text-indigo-600 dark:text-indigo-400 font-black">«{activeWord.text}»</span> در:
+                      {t('دسته‌بندی کلمه', 'Categorize word')} <span className="text-indigo-600 dark:text-indigo-400 font-black">«{activeWord.text}»</span> {t('در:', 'in:')}
                     </span>
                     <select
                       value={targetGroupId}
@@ -287,18 +291,18 @@ function WordCloud({
                   <button
                     onClick={() => onAddToWhitelist(activeWord.text, targetGroupId)}
                     className="py-1 px-3 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
-                    title="افزودن مستقیم کلمه به لیست سفید"
+                    title={t('افزودن مستقیم کلمه به لیست سفید', 'Add word directly to whitelist')}
                   >
                     <Plus className="w-3.5 h-3.5 shrink-0" />
-                    <span>افزودن به سفید</span>
+                    <span>{t('افزودن به سفید', 'Add to Whitelist')}</span>
                   </button>
                   <button
                     onClick={() => onAddToStopWords(activeWord.text)}
                     className="py-1 px-3 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
-                    title="حذف کلمه از ابرکلمات"
+                    title={t('حذف کلمه از ابرکلمات', 'Remove word from word cloud')}
                   >
                     <EyeOff className="w-3.5 h-3.5 shrink-0" />
-                    <span>افزودن به استاپ</span>
+                    <span>{t('افزودن به استاپ', 'Add to Stopwords')}</span>
                   </button>
                 </div>
               </div>
@@ -316,17 +320,17 @@ function WordCloud({
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 hover:border-slate-600' 
                 : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'
             }`}
-            title={isFullscreen ? 'خروج از تمام‌صفحه' : 'نمایش تمام‌صفحه'}
+            title={isFullscreen ? t('خروج از تمام‌صفحه', 'Exit Fullscreen') : t('نمایش تمام‌صفحه', 'Fullscreen')}
           >
             {isFullscreen ? (
               <>
                 <Minimize2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                <span>خروج از تمام‌صفحه</span>
+                <span>{t('خروج از تمام‌صفحه', 'Exit Fullscreen')}</span>
               </>
             ) : (
               <>
                 <Maximize2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                <span>تمام‌صفحه</span>
+                <span>{t('تمام‌صفحه', 'Fullscreen')}</span>
               </>
             )}
           </button>
@@ -339,10 +343,10 @@ function WordCloud({
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 hover:border-slate-600' 
                 : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'
             }`}
-            title="دانلود به عنوان تصویر PNG"
+            title={t('دانلود به عنوان تصویر PNG', 'Download as PNG image')}
           >
             <Download className="w-3.5 h-3.5 text-[#0057D9] shrink-0" />
-            <span>خروجی تصویر PNG</span>
+            <span>{t('خروجی تصویر PNG', 'Export PNG Image')}</span>
           </button>
         </div>
       </div>
@@ -379,14 +383,14 @@ function WordCloud({
                 ? 'bg-slate-900/90 border-slate-800 text-slate-200' 
                 : 'bg-white/95 border-slate-200 text-slate-800'
             }`}
-            style={{ direction: 'rtl' }}
+            style={{ direction: language === 'fa' ? 'rtl' : 'ltr' }}
           >
-            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">کلمه:</span>
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">{t('کلمه:', 'Word:')}</span>
             <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 dark:bg-indigo-500/20 px-2 py-0.5 rounded">
               {activeWord.text}
             </span>
             <div className="w-[1px] h-3 bg-slate-200 dark:bg-slate-800" />
-            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">تعداد تکرار:</span>
+            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">{t('تعداد تکرار:', 'Frequency:')}</span>
             <span className="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/20 px-1.5 py-0.5 rounded font-mono">
               {activeWord.value}
             </span>
@@ -395,8 +399,8 @@ function WordCloud({
 
         {processedWords.length === 0 ? (
           <div className={`text-center p-6 font-sans z-10 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-            <p className="text-sm">داده‌ای برای نمایش در ابرکلمات وجود ندارد.</p>
-            <p className="text-xs mt-1">کلمات کلیدی لیست سفید را تعریف کرده یا فایل CSV حاوی گفتگوها را آپلود کنید.</p>
+            <p className="text-sm">{t('داده‌ای برای نمایش در ابرکلمات وجود ندارد.', 'No data to display in the word cloud.')}</p>
+            <p className="text-xs mt-1">{t('کلمات کلیدی لیست سفید را تعریف کرده یا فایل CSV حاوی گفتگوها را آپلود کنید.', 'Define whitelist keywords or upload a CSV file containing conversations.')}</p>
           </div>
         ) : (
           <div className="w-full h-full relative z-10 p-4" key={isFullscreen ? 'fullscreen' : 'normal'}>
@@ -411,16 +415,16 @@ function WordCloud({
 
         {/* Floating Legend / Information Banner */}
         <div className={`absolute bottom-3 right-3 left-3 flex justify-between items-center text-[9px] font-mono pointer-events-none z-20 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-          <span>ابرکلمات تعاملی با کتابخانه react-wordcloud (تراز ۰ درجه)</span>
+          <span>{t('ابرکلمات تعاملی با کتابخانه react-wordcloud (تراز ۰ درجه)', 'Interactive word cloud with react-wordcloud (0° degree rotation)')}</span>
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#F8FAFC]' : 'bg-[#0F172A]'}`} /> تکرار بالا
+              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#F8FAFC]' : 'bg-[#0F172A]'}`} /> {t('تکرار بالا', 'High Frequency')}
             </span>
             <span className="flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#38BDF8]' : 'bg-[#2563EB]'}`} /> تکرار متوسط
+              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#38BDF8]' : 'bg-[#2563EB]'}`} /> {t('تکرار متوسط', 'Medium Frequency')}
             </span>
             <span className="flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#94A3B8]' : 'bg-[#94A3B8]'}`} /> تکرار کم
+              <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#94A3B8]' : 'bg-[#94A3B8]'}`} /> {t('تکرار کم', 'Low Frequency')}
             </span>
           </div>
         </div>

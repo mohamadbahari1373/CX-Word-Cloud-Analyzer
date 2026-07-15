@@ -417,6 +417,22 @@ export default function App() {
     });
   }, [activeFilteredChatRows, sortColumn, sortDirection]);
   
+  // Language support
+  const [language, setLanguage] = useState<'fa' | 'en'>(() => {
+    const saved = localStorage.getItem('cx_language');
+    return (saved === 'en' || saved === 'fa') ? saved : 'fa';
+  });
+
+  const t = useCallback((fa: string, en: string) => {
+    return language === 'fa' ? fa : en;
+  }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem('cx_language', language);
+    document.documentElement.dir = language === 'fa' ? 'rtl' : 'ltr';
+    document.documentElement.lang = language;
+  }, [language]);
+
   // Theme support
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('cx_theme');
@@ -690,7 +706,7 @@ export default function App() {
       link.click();
     } catch (err) {
       console.error('Error exporting image:', err);
-      setChatSelectionError('خطایی در تولید تصویر رخ داد. لطفاً دوباره تلاش کنید.');
+      setChatSelectionError(t('خطایی در تولید تصویر رخ داد. لطفاً دوباره تلاش کنید.', 'An error occurred during image generation. Please try again.'));
       setTimeout(() => setChatSelectionError(null), 5000);
     } finally {
       setIsExportingImage(false);
@@ -1215,13 +1231,13 @@ export default function App() {
       );
 
       if (!isValid) {
-        setJsonError("فرمت اشتباه: اشیاء آرایه باید حتما دارای کلیدهای 'text' و 'value' باشند.");
+        setJsonError(t("فرمت اشتباه: اشیاء آرایه باید حتما دارای کلیدهای 'text' و 'value' باشند.", "Invalid format: Array objects must have 'text' and 'value' keys."));
         return;
       }
 
       setJsonError(null);
     } catch (e: any) {
-      setJsonError(`خطای نحوی JSON: ${e.message}`);
+      setJsonError(t(`خطای نحوی JSON: ${e.message}`, `JSON Syntax Error: ${e.message}`));
     }
   };
 
@@ -1293,7 +1309,7 @@ export default function App() {
       .sort((a, b) => b.length - a.length);
 
     if (sortedWords.length === 0) {
-      return <div className="leading-relaxed text-sm" style={{ direction: 'rtl', textAlign: 'right' }}>{text}</div>;
+      return <div className="leading-relaxed text-sm" style={{ direction: language === 'fa' ? 'rtl' : 'ltr', textAlign: language === 'fa' ? 'right' : 'left' }}>{text}</div>;
     }
 
     const cl = getGroupColorClasses(appliedSelectedGroup?.color || 'indigo');
@@ -1318,7 +1334,7 @@ export default function App() {
         tokens.push({
           id: tokenId,
           original: match,
-          replacement: `<span class="${baseClass}" title="کلمه کلیدی">${match}</span>`
+          replacement: `<span class="${baseClass}" title="${t('کلمه کلیدی', 'Keyword')}">${match}</span>`
         });
         return tokenId;
       });
@@ -1329,7 +1345,7 @@ export default function App() {
       highlighted = highlighted.replace(token.id, token.replacement);
     });
 
-    return <div dangerouslySetInnerHTML={{ __html: highlighted }} className="leading-relaxed text-sm text-slate-700 dark:text-slate-300" />;
+    return <div dangerouslySetInnerHTML={{ __html: highlighted }} className="leading-relaxed text-sm text-slate-700 dark:text-slate-300" style={{ direction: language === 'fa' ? 'rtl' : 'ltr', textAlign: language === 'fa' ? 'right' : 'left' }} />;
   };
 
   // Generate dynamic daily trend data for the selected Shamsi date range
@@ -1504,12 +1520,25 @@ export default function App() {
             </div>
             <div>
               <h1 className={`text-base md:text-lg font-bold tracking-tight flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                تحلیلگر محاسباتی  ابرکلمات تجربه مشتری (CX)
+                {t('تحلیلگر محاسباتی  ابرکلمات تجربه مشتری (CX)', 'Customer Experience (CX) Computational Word Cloud Analyzer')}
               </h1>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Language Switcher */}
+            <button
+              onClick={() => setLanguage(language === 'fa' ? 'en' : 'fa')}
+              className={`p-2 rounded-lg border transition-all duration-300 cursor-pointer flex items-center justify-center font-bold text-xs ${
+                isDarkMode 
+                  ? 'bg-slate-800 border-slate-700 text-indigo-400 hover:bg-slate-700 shadow-sm' 
+                  : 'bg-slate-100 border-slate-200 text-indigo-600 hover:bg-slate-200 shadow-xs'
+              }`}
+              title={language === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
+            >
+              {language === 'fa' ? 'EN' : 'FA'}
+            </button>
+
             {/* Sidebar Toggle Button in Header */}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -1518,10 +1547,10 @@ export default function App() {
                   ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-sm' 
                   : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900 shadow-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-350'
               }`}
-              title={isSidebarCollapsed ? 'نمایش سایدبار مدیریت کلمات' : 'پنهان‌سازی سایدبار مدیریت کلمات'}
+              title={isSidebarCollapsed ? t('نمایش سایدبار مدیریت کلمات', 'Show word management sidebar') : t('پنهان‌سازی سایدبار مدیریت کلمات', 'Hide word management sidebar')}
             >
               <Sliders className="w-4 h-4" />
-              <span className="text-xs font-bold">{isSidebarCollapsed ? 'مدیریت کلمات' : 'بستن مدیریت'}</span>
+              <span className="text-xs font-bold">{isSidebarCollapsed ? t('مدیریت کلمات', 'Word Mgmt') : t('بستن مدیریت', 'Close Mgmt')}</span>
             </button>
 
             {/* Theme Toggle Button */}
@@ -1532,14 +1561,14 @@ export default function App() {
                   ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700 shadow-sm' 
                   : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900 shadow-xs'
               }`}
-              title={isDarkMode ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}
+              title={isDarkMode ? t('تغییر به حالت روشن', 'Switch to light mode') : t('تغییر به حالت تاریک', 'Switch to dark mode')}
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
             <div className="hidden sm:flex flex-col items-end text-left">
-              <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>کارشناس بهبود تجربه مشتری</span>
-              <span className={`text-[9px] uppercase font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>وضعیت سیستم: آنلاین</span>
+              <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t('کارشناس بهبود تجربه مشتری', 'CX Expert')}</span>
+              <span className={`text-[9px] uppercase font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t('وضعیت سیستم: آنلاین', 'SYSTEM: ONLINE')}</span>
             </div>
             <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
               <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -1578,12 +1607,12 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <Upload className="w-4 h-4 text-[#0057D9] shrink-0 animate-bounce" />
                   <div className="text-right">
-                    <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>بارگذاری فایل CSV یا Excel گفتگوها</h4>
-                    <p className={`text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>فایل را اینجا رها کنید یا برای انتخاب کلیک کنید</p>
+                    <h4 className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{t('بارگذاری فایل CSV یا Excel گفتگوها', 'Upload Chat CSV or Excel File')}</h4>
+                    <p className={`text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t('فایل را اینجا رها کنید یا برای انتخاب کلیک کنید', 'Drop the file here or click to select')}</p>
                   </div>
                 </div>
                 <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded border hidden sm:inline ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                  تشخیص خودکار ستون گفتگو
+                  {t('تشخیص خودکار ستون گفتگو', 'Auto-detect Chat Column')}
                 </span>
               </div>
 
@@ -1591,7 +1620,7 @@ export default function App() {
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto shrink-0 justify-end">
                 {csvHeaders.length > 0 && (
                   <div className={`flex items-center gap-2 border px-2.5 py-1.5 rounded-lg ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                    <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>ستون متن گفتگو:</span>
+                    <span className={`text-[11px] font-semibold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{t('ستون متن گفتگو:', 'Chat text column:')}</span>
                     <select
                       value={selectedTextColumn}
                       onChange={(e) => setSelectedTextColumn(e.target.value)}
@@ -1639,10 +1668,10 @@ export default function App() {
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>نمایش کل محتوای فایل چت ({chatRows.length} ردیف داده بارگذاری شده)</span>
+                  <span>{t(`نمایش کل محتوای فایل چت (${chatRows.length} ردیف داده بارگذاری شده)`, `Show all chat file content (${chatRows.length} loaded rows)`)}</span>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-slate-400 font-normal">
-                  <span>{isFullTableExpanded ? 'بستن جدول' : 'مشاهده و مرتب‌سازی جدول'}</span>
+                  <span>{isFullTableExpanded ? t('بستن جدول', 'Close Table') : t('مشاهده و مرتب‌سازی جدول', 'View & Sort Table')}</span>
                   {isFullTableExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 </div>
               </button>
@@ -1721,8 +1750,8 @@ export default function App() {
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">کل گفتگوهای بارگذاری شده</p>
-              <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{analysisResult.totalChats} چت</h3>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">{t('کل گفتگوهای بارگذاری شده', 'Total Loaded Chats')}</p>
+              <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{analysisResult.totalChats} {t('چت', 'chats')}</h3>
             </div>
           </div>
 
@@ -1732,10 +1761,10 @@ export default function App() {
             </div>
             <div>
               <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                {wordCloudUseAllChats ? 'کل گفتگوهای تحلیل شده' : 'گفتگوهای شامل کلمات کلیدی'}
+                {wordCloudUseAllChats ? t('کل گفتگوهای تحلیل شده', 'Total Analyzed Chats') : t('گفتگوهای شامل کلمات کلیدی', 'Chats Containing Keywords')}
               </p>
               <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                {wordCloudUseAllChats ? analysisResult.totalChats : analysisResult.matchedChatsCount} چت 
+                {wordCloudUseAllChats ? analysisResult.totalChats : analysisResult.matchedChatsCount} {t('چت', 'chats')} 
                 <span className="text-xs text-slate-400 font-normal mr-1">
                   ({analysisResult.totalChats > 0 ? Math.round(((wordCloudUseAllChats ? analysisResult.totalChats : analysisResult.matchedChatsCount) / analysisResult.totalChats) * 100) : 0}٪)
                 </span>
@@ -1748,9 +1777,9 @@ export default function App() {
               <Tag className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">کلمات لیست سفید منتخب</p>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">{t('کلمات لیست سفید منتخب', 'Selected Whitelist Words')}</p>
               <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                {wordCloudUseAllChats ? 0 : (selectedGroup ? selectedGroup.words.length : 0)} کلمه
+                {wordCloudUseAllChats ? 0 : (selectedGroup ? selectedGroup.words.length : 0)} {t('کلمه', 'words')}
               </h3>
             </div>
           </div>
@@ -1761,7 +1790,7 @@ export default function App() {
             </div>
             <div>
               <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                {wordCloudUseAllChats ? 'کل تکرار تمامی کلمات کلیدی' : 'کل تکرار کلمات لیست منتخب'}
+                {wordCloudUseAllChats ? t('کل تکرار تمامی کلمات کلیدی', 'Total Occurrence of All Keywords') : t('کل تکرار کلمات لیست منتخب', 'Total Occurrence of Selected List Words')}
               </p>
               <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
                 {(() => {
@@ -1774,7 +1803,7 @@ export default function App() {
                       return sum + freq;
                     }, 0);
                   }
-                })()} مرتبه
+                })()} {t('مرتبه', 'times')}
               </h3>
             </div>
           </div>
@@ -1797,7 +1826,7 @@ export default function App() {
                   }`}
                 >
                   <Layers className="w-4 h-4" />
-                  <span>لیست‌های سفید</span>
+                  <span>{t('لیست‌های سفید', 'White Lists')}</span>
                 </button>
                 <button
                   onClick={() => setActiveManagementTab('stopWords')}
@@ -1808,7 +1837,7 @@ export default function App() {
                   }`}
                 >
                   <Filter className="w-4 h-4" />
-                  <span>کلمات استاپ</span>
+                  <span>{t('کلمات استاپ', 'Stop Words')}</span>
                 </button>
               </div>
 
@@ -1818,7 +1847,7 @@ export default function App() {
                 className={`p-3 border-r hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer ${
                   isDarkMode ? 'border-slate-800 text-slate-400' : 'border-slate-150 text-slate-500'
                 }`}
-                title="پنهان کردن سایدبار مدیریت"
+                title={t('پنهان کردن سایدبار مدیریت', 'Hide management sidebar')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1829,7 +1858,7 @@ export default function App() {
               {activeManagementTab === 'whitelist' ? (
                 <div id="whitelist-panel" className="flex flex-col">
                   <div className="flex items-center justify-between pb-3 mb-4 border-b border-dashed dark:border-slate-800 border-slate-100">
-                    <h3 className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>لیست‌های سفید (دسته‌بندی شده)</h3>
+                    <h3 className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t('لیست‌های سفید (دسته‌بندی شده)', 'Whitelists (Categorized)')}</h3>
                   </div>
 
                   {/* Input Form for New Group */}
@@ -1844,22 +1873,22 @@ export default function App() {
                             handleAddGroup();
                           }
                         }}
-                        placeholder="نام لیست جدید (مثلاً: لیست صرافی‌ها)..."
+                        placeholder={t('نام لیست جدید (مثلاً: لیست صرافی‌ها)...', 'New list name (e.g. Exchanges list)...')}
                         className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-indigo-500 outline-none transition-all font-medium placeholder:text-slate-500 ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
                       />
                       <button
                         onClick={handleAddGroup}
                         className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
-                        title="ایجاد لیست جدید"
+                        title={t('ایجاد لیست جدید', 'Create new list')}
                       >
                         <Plus className="w-4 h-4" />
-                        <span>ایجاد</span>
+                        <span>{t('ایجاد', 'Create')}</span>
                       </button>
                     </div>
                     {/* Inline Color Selection Row */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pr-1" style={{ direction: 'rtl' }}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pr-1" style={{ direction: language === 'fa' ? 'rtl' : 'ltr' }}>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 font-bold">رنگ لیست:</span>
+                        <span className="text-[10px] text-slate-400 font-bold">{t('رنگ لیست:', 'List color:')}</span>
                         <div className="flex items-center gap-1.5">
                           {COLOR_PRESETS.map(preset => {
                             const isSelected = newGroupColor === preset.id;
@@ -1879,14 +1908,14 @@ export default function App() {
 
                       {/* Custom Color Picker Button */}
                       <div className="flex items-center gap-1.5 border-t sm:border-t-0 sm:border-r pt-1.5 sm:pt-0 sm:pr-2 dark:border-slate-800 border-slate-100 shrink-0">
-                        <span className="text-[9px] text-slate-400 font-medium">رنگ سفارشی:</span>
+                        <span className="text-[9px] text-slate-400 font-medium">{t('رنگ سفارشی:', 'Custom color:')}</span>
                         <div className="relative flex items-center justify-center w-5 h-5 rounded-md border border-slate-300 dark:border-slate-700 overflow-hidden cursor-pointer shadow-xs transition-transform hover:scale-105 shrink-0">
                           <input
                             type="color"
                             value={newGroupColor.startsWith('#') ? newGroupColor : '#6366f1'}
                             onChange={(e) => setNewGroupColor(e.target.value)}
                             className="absolute inset-0 w-full h-full p-0 border-0 opacity-0 cursor-pointer"
-                            title="انتخاب رنگ سفارشی"
+                            title={t('انتخاب رنگ سفارشی', 'Select custom color')}
                           />
                           <div 
                             className="w-full h-full rounded-md transition-colors"
@@ -1929,13 +1958,13 @@ export default function App() {
                                 handleToggleGroupActive(g.id);
                               }}
                               className={`rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer`}
-                              title="فعال / غیرفعال سازی لیست"
+                              title={t('فعال / غیرفعال سازی لیست', 'Enable / Disable list')}
                             />
                             <span className={`font-semibold transition-colors ${g.isActive ? (isSelected ? cl.text : (isDarkMode ? 'text-slate-200' : 'text-slate-800')) : 'text-slate-500 line-through font-normal'}`}>
                               {g.name}
                             </span>
                             <span className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${isSelected ? cl.badge : (isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700/60' : 'bg-slate-100 text-slate-500 border-slate-200/50')}`}>
-                              {g.words.length} کلمه
+                              {g.words.length} {t('کلمه', 'words')}
                             </span>
                           </div>
                           
@@ -1945,7 +1974,7 @@ export default function App() {
                               handleDeleteGroup(g.id, g.name);
                             }}
                             className="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                            title="حذف کامل این لیست"
+                            title={t('حذف کامل این لیست', 'Delete this list completely')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1979,7 +2008,7 @@ export default function App() {
                         <div className="flex items-center justify-between mb-2">
                           <span className={`text-xs font-bold flex items-center gap-1 ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                             <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
-                            مدیریت کلمات لیست «{currentGroup.name}»
+                            {t('مدیریت کلمات لیست', 'Manage words of group')} «{currentGroup.name}»
                           </span>
                         </div>
 
@@ -1995,13 +2024,13 @@ export default function App() {
                                 handleAddWordToGroup();
                               }
                             }}
-                            placeholder="کلمه جدید (برای افزودن همزمان با ویرگول جدا کنید)..."
+                            placeholder={t('کلمه جدید (برای افزودن همزمان با ویرگول جدا کنید)...', 'New word (separate with comma to add multiple)...')}
                             className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-indigo-500 outline-none placeholder:text-slate-500 ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
                           />
                           <button
                             onClick={handleAddWordToGroup}
                             className={`p-2 rounded-lg transition-colors shrink-0 flex items-center justify-center cursor-pointer ${isDarkMode ? 'bg-slate-850 hover:bg-slate-750 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
-                            title="افزودن به این لیست"
+                            title={t('افزودن به این لیست', 'Add to this list')}
                           >
                             <Plus className="w-4 h-4" />
                           </button>
@@ -2009,7 +2038,7 @@ export default function App() {
 
                         {/* Sorting Controls for Whitelist Words */}
                         <div className="flex items-center gap-1.5 mb-2">
-                          <span className="text-[10px] font-semibold text-slate-400">ترتیب کلمات:</span>
+                          <span className="text-[10px] font-semibold text-slate-400">{t('ترتیب کلمات:', 'Word order:')}</span>
                           <button
                             onClick={() => setWhitelistWordsSortBy('date')}
                             className={`text-[9px] px-2 py-0.5 rounded transition-all cursor-pointer ${
@@ -2018,7 +2047,7 @@ export default function App() {
                                 : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                             }`}
                           >
-                            جدیدترین‌ها
+                            {t('جدیدترین‌ها', 'Newest')}
                           </button>
                           <button
                             onClick={() => setWhitelistWordsSortBy('alphabetical')}
@@ -2028,7 +2057,7 @@ export default function App() {
                                 : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                             }`}
                           >
-                            الفبایی
+                            {t('الفبایی', 'Alphabetical')}
                           </button>
                           <button
                             onClick={() => setWhitelistWordsSortBy('frequency')}
@@ -2037,9 +2066,9 @@ export default function App() {
                                 ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs'
                                 : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                             }`}
-                            title="نمایش بر اساس فراوانی تکرار کلمه در چت‌ها"
+                            title={t('نمایش بر اساس فراوانی تکرار کلمه در چت‌ها', 'Sort by frequency of occurrence in chats')}
                           >
-                            تعداد تکرار
+                            {t('تعداد تکرار', 'Frequency')}
                           </button>
                         </div>
 
@@ -2047,7 +2076,7 @@ export default function App() {
                         <div className={`flex-grow max-h-[160px] overflow-y-auto pr-1 rounded-lg p-2.5 border ${isDarkMode ? 'bg-slate-950 border-slate-800/80' : 'bg-slate-50 border-slate-200/60'}`}>
                           {sortedCurrentGroupWords.length === 0 ? (
                             <div className={`text-center py-4 text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                              هیچ کلمه‌ای در این لیست قرار ندارد.
+                              {t('هیچ کلمه‌ای در این لیست قرار ندارد.', 'No words in this list.')}
                             </div>
                           ) : (
                             <div className="flex flex-wrap gap-1.5">
@@ -2084,22 +2113,22 @@ export default function App() {
               ) : (
                 <div id="stop-words-panel" className="flex flex-col">
                   <div className="flex items-center justify-between pb-3 mb-4 border-b border-dashed dark:border-slate-800 border-slate-100">
-                    <h3 className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>مدیریت کلمات استاپ (Stop Words)</h3>
+                    <h3 className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t('مدیریت کلمات استاپ (Stop Words)', 'Manage Stop Words')}</h3>
                     <button
                       onClick={() => {
-                        if (confirm("آیا مایلید لیست کلمات استاپ را به کلمات پیش‌فرض بازیابی کنید؟ کلمات افزوده شده شما پاک خواهند شد.")) {
+                        if (confirm(t('آیا مایلید لیست کلمات استاپ را به کلمات پیش‌فرض بازیابی کنید؟ کلمات افزوده شده شما پاک خواهند شد.', 'Are you sure you want to restore stop words to defaults? Your added words will be removed.'))) {
                           setStopWords(DEFAULT_STOP_WORDS);
                         }
                       }}
                       className={`text-[9px] flex items-center gap-1 font-bold px-2 py-1 rounded transition-colors cursor-pointer ${
                         isDarkMode 
-                          ? 'bg-slate-850 hover:bg-slate-800 text-slate-300 border-slate-800' 
+                          ? 'bg-slate-850 hover:bg-slate-750 text-slate-300 border-slate-800' 
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
                       }`}
-                      title="بازیابی کلمات پیش‌فرض"
+                      title={t('بازیابی کلمات پیش‌فرض', 'Restore default words')}
                     >
                       <RotateCcw className="w-3 h-3 text-[#0057D9]" />
-                      <span>بازنشانی پیش‌فرض</span>
+                      <span>{t('بازنشانی پیش‌فرض', 'Reset to Default')}</span>
                     </button>
                   </div>
 
@@ -2127,7 +2156,7 @@ export default function App() {
                           }
                         }
                       }}
-                      placeholder="کلمه استاپ جدید (با ویرگول یا فاصله جدا کنید)..."
+                      placeholder={t('کلمه استاپ جدید (با ویرگول یا فاصله جدا کنید)...', 'New stop word (separate with comma or space)...')}
                       className={`flex-grow text-xs px-3 py-2 rounded-lg focus:border-rose-500 outline-none border transition-all font-medium placeholder:text-slate-500 ${
                         isDarkMode 
                           ? 'bg-slate-950 border-slate-800 text-slate-100 focus:border-rose-500/50' 
@@ -2155,7 +2184,7 @@ export default function App() {
                       title="افزودن کلمه استاپ"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>افزودن</span>
+                      <span>{t('افزودن', 'Add')}</span>
                     </button>
                   </div>
 
@@ -2165,7 +2194,7 @@ export default function App() {
                       type="text"
                       value={stopWordsSearch}
                       onChange={(e) => setStopWordsSearch(e.target.value)}
-                      placeholder="جستجو در لیست کلمات استاپ..."
+                      placeholder={t('جستجو در لیست کلمات استاپ...', 'Search stop words list...')}
                       className={`w-full text-[11px] px-2.5 py-1.5 rounded-md outline-none border transition-all font-medium placeholder:text-slate-500 ${
                         isDarkMode 
                           ? 'bg-slate-950 border-slate-800 text-slate-300 focus:border-rose-500/50' 
@@ -2192,7 +2221,7 @@ export default function App() {
                       if (filtered.length === 0) {
                         return (
                           <div className={`text-center py-4 text-[11px] font-normal ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                            {stopWordsSearch ? 'کلمه‌ای یافت نشد.' : 'لیست کلمات استاپ خالی است.'}
+                            {stopWordsSearch ? t('کلمه‌ای یافت نشد.', 'No words found.') : t('لیست کلمات استاپ خالی است.', 'Stop words list is empty.')}
                           </div>
                         );
                       }
@@ -2210,7 +2239,7 @@ export default function App() {
                                   setStopWords(prev => prev.filter(w => w !== word));
                                 }}
                                 className="text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                                title="حذف کلمه از لیست استاپ"
+                                title={t('حذف کلمه از لیست استاپ', 'Remove word from stop words')}
                               >
                                 <X className="w-3 h-3" />
                               </button>
@@ -2221,7 +2250,7 @@ export default function App() {
                     })()}
                   </div>
                   <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                    <span>تعداد کل کلمات استاپ: {stopWords.length} کلمه</span>
+                    <span>{t('تعداد کل کلمات استاپ:', 'Total Stop Words:')} {stopWords.length} {t('کلمه', 'words')}</span>
                   </div>
                 </div>
               )}
@@ -2247,15 +2276,15 @@ export default function App() {
                         ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750'
                         : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-150'
                   }`}
-                  title={isSidebarCollapsed ? 'نمایش سایدبار مدیریت کلمات' : 'پنهان‌سازی سایدبار مدیریت کلمات'}
+                  title={isSidebarCollapsed ? t('نمایش سایدبار مدیریت کلمات', 'Show word management sidebar') : t('پنهان‌سازی سایدبار مدیریت کلمات', 'Hide word management sidebar')}
                 >
                   <Sliders className={`w-3.5 h-3.5 ${isSidebarCollapsed ? 'text-white' : 'text-indigo-500'}`} />
-                  <span>{isSidebarCollapsed ? 'نمایش سایدبار مدیریت' : 'بستن سایدبار'}</span>
+                  <span>{isSidebarCollapsed ? t('نمایش سایدبار مدیریت', 'Show Management Sidebar') : t('بستن سایدبار', 'Close Sidebar')}</span>
                 </button>
 
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
-                  <h3 className={`text-xs sm:text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>ابر کلمات محاسباتی و تعاملی بازخوردهای مشتریان</h3>
+                  <h3 className={`text-xs sm:text-sm font-bold ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{t('ابر کلمات محاسباتی و تعاملی بازخوردهای مشتریان', 'Computational & Interactive Customer Feedback Word Cloud')}</h3>
                 </div>
               </div>
               
@@ -2268,13 +2297,13 @@ export default function App() {
                       ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                   }`}
-                  title="اعمال کلمات جدید و بازسازی ابرکلمات"
+                  title={t('اعمال کلمات جدید و بازسازی ابرکلمات', 'Apply new words and rebuild word cloud')}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${hasPendingChanges ? 'animate-spin' : ''}`} />
-                  <span>بروزرسانی ابرکلمات</span>
+                  <span>{t('بروزرسانی ابرکلمات', 'Update Word Cloud')}</span>
                 </button>
                 <span className={`text-[11px] sm:text-xs font-semibold hidden sm:inline ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  رندر بر اساس {isJsonMode ? 'آرایه ویرایشی JSON' : 'تحلیل فایل بارگذاری شده'}
+                  {t('رندر بر اساس', 'Rendered based on')} {isJsonMode ? t('آرایه ویرایشی JSON', 'JSON editing array') : t('تحلیل فایل بارگذاری شده', 'loaded file analysis')}
                 </span>
               </div>
             </div>
@@ -2283,8 +2312,16 @@ export default function App() {
               <div className="mb-4 p-3 rounded-lg border flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200 animate-pulse">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                  <div className="text-xs font-medium" style={{ direction: 'rtl', textAlign: 'right' }}>
-                    تغییراتی در <span className="font-bold">{pendingChangesSummary.join(' و ')}</span> ایجاد شده است که هنوز در ابرکلمات رندر نشده‌اند.
+                  <div className="text-xs font-medium" style={{ direction: language === 'fa' ? 'rtl' : 'ltr', textAlign: language === 'fa' ? 'right' : 'left' }}>
+                    {language === 'fa' ? (
+                      <>تغییراتی در <span className="font-bold">{pendingChangesSummary.join(' و ')}</span> ایجاد شده است که هنوز در ابرکلمات رندر نشده‌اند.</>
+                    ) : (
+                      <>Changes have been made in <span className="font-bold">{pendingChangesSummary.map(item => {
+                        if (item === 'لیست کلمات سفید') return 'Whitelist';
+                        if (item === 'کلمات استاپ') return 'Stopwords';
+                        return item;
+                      }).join(' and ')}</span> that are not yet rendered in the word cloud.</>
+                    )}
                   </div>
                 </div>
                 <button
@@ -2292,7 +2329,7 @@ export default function App() {
                   className="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>اعمال تغییرات و رندر جدید</span>
+                  <span>{t('اعمال تغییرات و رندر جدید', 'Apply Changes & Re-render')}</span>
                 </button>
               </div>
             )}
@@ -2304,14 +2341,14 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <span className="text-indigo-500">📊</span>
                 <span className={`font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                  محدوده محاسبه کلمات کلیدی:
+                  {t('محدوده محاسبه کلمات کلیدی:', 'Keyword Calculation Scope:')}
                 </span>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                   wordCloudUseAllChats 
                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
                     : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
                 }`}>
-                  {wordCloudUseAllChats ? 'بر اساس کل چت‌ها' : 'بر اساس لیست‌های منتخب'}
+                  {wordCloudUseAllChats ? t('بر اساس کل چت‌ها', 'Based on All Chats') : t('بر اساس لیست‌های منتخب', 'Based on Selected Whitelist')}
                 </span>
               </div>
               
@@ -2324,7 +2361,7 @@ export default function App() {
                 />
                 <div className="w-9 h-5 bg-slate-300 dark:bg-slate-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
                 <span className="mr-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  محاسبه بر اساس کل گفتگوها (بدون فیلتر لیست)
+                  {t('محاسبه بر اساس کل گفتگوها (بدون فیلتر لیست)', 'Calculate based on all conversations (no whitelist filter)')}
                 </span>
               </label>
             </div>
@@ -2338,6 +2375,7 @@ export default function App() {
               selectedGroupId={selectedGroupId}
               onAddToStopWords={handleDirectAddWordToStopWords}
               onAddToWhitelist={handleDirectAddWordToWhitelist}
+              language={language}
             />
           </div>
 
@@ -2357,17 +2395,17 @@ export default function App() {
                 </div>
                 <div>
                   <h3 className={`text-sm font-bold flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                    <span>{wordCloudUseAllChats ? '۲. کل مکالمات فعال بارگذاری شده جهت تحلیل' : '۲. مکالمات فیلتر شده بر اساس کلمات کلیدی لیست سفید'}</span>
+                    <span>{wordCloudUseAllChats ? t('۲. کل مکالمات فعال بارگذاری شده جهت تحلیل', '2. All Loaded Conversations for Analysis') : t('۲. مکالمات فیلتر شده بر اساس کلمات کلیدی لیست سفید', '2. Conversations Filtered by Whitelist Keywords')}</span>
                   </h3>
                   <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {wordCloudUseAllChats ? 'فهرست تمامی پیام‌هایی که برای ساخت ابرکلمات پردازش شدند' : 'فهرست پیام‌هایی که شامل واژه‌های فیلتر شده هستند'}
+                    {wordCloudUseAllChats ? t('فهرست تمامی پیام‌هایی که برای ساخت ابرکلمات پردازش شدند', 'List of all messages processed for building the word cloud') : t('فهرست پیام‌هایی که شامل واژه‌های فیلتر شده هستند', 'List of messages containing filtered keywords')}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2.5">
                 <div className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 border ${isDarkMode ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-100 text-emerald-700'}`}>
-                  <span>نمایش {matchedChatsList.length} گفتگو از {chatRows.length} گفتگو</span>
+                  <span>{t('نمایش', 'Showing')} {matchedChatsList.length} {t('گفتگو از', 'conversations out of')} {chatRows.length} {t('گفتگو', 'conversations')}</span>
                 </div>
                 <div className={`p-1.5 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
                   {isFilteredChatsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -2386,9 +2424,9 @@ export default function App() {
                 >
                   <p className={`text-xs mb-4 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     {wordCloudUseAllChats ? (
-                      <span>در زیر، تمامی پیام‌های بارگذاری شده (پس از فیلترهای بالا) را مشاهده می‌کنید. تمامی این پیام‌ها برای استخراج ابرکلمات بررسی شده‌اند. در صورت تمایل می‌توانید روی هر کلمه در ابرکلمات کلیک کنید تا در چت‌های زیر هایلایت شود.</span>
+                      <span>{t('در زیر، تمامی پیام‌های بارگذاری شده (پس از فیلترهای بالا) را مشاهده می‌کنید. تمامی این پیام‌ها برای استخراج ابرکلمات بررسی شده‌اند. در صورت تمایل می‌توانید روی هر کلمه در ابرکلمات کلیک کنید تا در چت‌های زیر هایلایت شود.', 'Below, you can see all loaded messages (after the filters above). All of these messages were analyzed to extract the word cloud. If desired, you can click any word in the word cloud to highlight it in the chats below.')}</span>
                     ) : (
-                      <span>در زیر، تمامی پیام‌هایی که شامل حداقل یکی از واژه‌های تعریف شده در «لیست سفید» شما هستند را مشاهده می‌کنید. برای شفافیت، کلمات تطبیق داده شده با هایلایت <span className={`font-semibold px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-[#0057D9]/10 text-[#0057D9] border-[#0057D9]/15'}`}>آبی اعتماد</span> مشخص گردیده‌اند و گفتگوها بر اساس شناسه چت یکتا فیلتر شده‌اند تا از نمایش رکوردهای تکراری جلوگیری شود.</span>
+                      <span>{t('در زیر، تمامی پیام‌هایی که شامل حداقل یکی از واژه‌های تعریف شده در «لیست سفید» شما هستند را مشاهده می‌کنید. برای شفافیت، کلمات تطبیق داده شده با هایلایت ', 'Below, you can see all messages containing at least one of the keywords defined in your "whitelist". For transparency, matching words are marked with a ')} <span className={`font-semibold px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-[#0057D9]/10 text-[#0057D9] border-[#0057D9]/15'}`}>{t('آبی اعتماد', 'blue trust highlight')}</span> {t('مشخص گردیده‌اند و گفتگوها بر اساس شناسه چت یکتا فیلتر شده‌اند تا از نمایش رکوردهای تکراری جلوگیری شود.', 'and conversations have been filtered by unique chat ID to prevent duplicate records.')}</span>
                     )}
                   </p>
 
@@ -2401,10 +2439,10 @@ export default function App() {
                         <div className="space-y-1">
                           <h4 className="text-xs font-bold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                             <Camera className="w-4 h-4 animate-pulse" />
-                            <span>ابزار صادرات تصویر چت‌های منتخب ({selectedChatsForImage.length} از ۵)</span>
+                            <span>{t('ابزار صادرات تصویر چت‌های منتخب', 'Selected Chats Image Export Tool')} ({selectedChatsForImage.length} {t('از ۵', 'out of 5')})</span>
                           </h4>
                           <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            شما پیام‌های مدنظرتان را انتخاب کرده‌اید. در زیر می‌توانید پیش‌نمایش چیدمان تصویر را مشاهده کرده و آن را به صورت فایل PNG باکیفیت بارگیری کنید.
+                            {t('شما پیام‌های مدنظرتان را انتخاب کرده‌اید. در زیر می‌توانید پیش‌نمایش چیدمان تصویر را مشاهده کرده و آن را به صورت فایل PNG باکیفیت بارگیری کنید.', 'You have selected your desired messages. Below you can see the image layout preview and download it as a high-quality PNG file.')}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
@@ -2416,7 +2454,7 @@ export default function App() {
                               isDarkMode ? 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300' : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
                             }`}
                           >
-                            <span>{isPreviewImageExpanded ? 'مخفی کردن پیش‌نمایش' : 'مشاهده پیش‌نمایش تصویر'}</span>
+                            <span>{isPreviewImageExpanded ? t('مخفی کردن پیش‌نمایش', 'Hide Preview') : t('مشاهده پیش‌نمایش تصویر', 'Show Image Preview')}</span>
                           </button>
                           <button
                             onClick={handleDownloadChatsImage}
@@ -2430,7 +2468,7 @@ export default function App() {
                             ) : (
                               <Download className="w-4 h-4" />
                             )}
-                            <span>{isExportingImage ? 'در حال تولید تصویر...' : 'دانلود تصویر PNG'}</span>
+                            <span>{isExportingImage ? t('در حال تولید تصویر...', 'Generating image...') : t('دانلود تصویر PNG', 'Download PNG Image')}</span>
                           </button>
                           <button
                             onClick={() => setSelectedChatsForImage([])}
@@ -2735,28 +2773,46 @@ export default function App() {
                   )}
                 </div>
                 <h3 className="text-base font-bold">
-                  {deleteConfirmState.type === 'group' && `حذف لیست سفید`}
-                  {deleteConfirmState.type === 'word' && `حذف کلمه کلیدی`}
-                  {deleteConfirmState.type === 'reset' && `بازنشانی تنظیمات لیست`}
+                  {deleteConfirmState.type === 'group' && t('حذف لیست سفید', 'Delete Whitelist')}
+                  {deleteConfirmState.type === 'word' && t('حذف کلمه کلیدی', 'Delete Keyword')}
+                  {deleteConfirmState.type === 'reset' && t('بازنشانی تنظیمات لیست', 'Reset List Configuration')}
                 </h3>
               </div>
 
               {/* Message Content */}
               <div className={`text-xs leading-relaxed mb-6 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                 {deleteConfirmState.type === 'group' && (
-                  <p>
-                    آیا از حذف کامل لیست سفید <strong className="text-rose-500">«{deleteConfirmState.groupName}»</strong> به همراه تمام کلمات داخل آن مطمئن هستید؟ این تغییر بلافاصله بر روی ابرکلمات اعمال خواهد شد و غیرقابل بازگشت است.
-                  </p>
+                  language === 'fa' ? (
+                    <p>
+                      آیا از حذف کامل لیست سفید <strong className="text-rose-500">«{deleteConfirmState.groupName}»</strong> به همراه تمام کلمات داخل آن مطمئن هستید؟ این تغییر بلافاصله بر روی ابرکلمات اعمال خواهد شد و غیرقابل بازگشت است.
+                    </p>
+                  ) : (
+                    <p>
+                      Are you sure you want to delete the whitelist <strong className="text-rose-500">"{deleteConfirmState.groupName}"</strong> completely along with all its words? This change will immediately affect the word cloud and is irreversible.
+                    </p>
+                  )
                 )}
                 {deleteConfirmState.type === 'word' && (
-                  <p>
-                    آیا مطمئن هستید که می‌خواهید کلمه کلیدی <strong className="text-rose-500">«{deleteConfirmState.wordText}»</strong> را از لیست <strong className={isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}>«{deleteConfirmState.groupName}»</strong> حذف کنید؟
-                  </p>
+                  language === 'fa' ? (
+                    <p>
+                      آیا مطمئن هستید که می‌خواهید کلمه کلیدی <strong className="text-rose-500">«{deleteConfirmState.wordText}»</strong> را از لیست <strong className={isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}>«{deleteConfirmState.groupName}»</strong> حذف کنید؟
+                    </p>
+                  ) : (
+                    <p>
+                      Are you sure you want to delete the keyword <strong className="text-rose-500">"{deleteConfirmState.wordText}"</strong> from the list <strong className={isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}>"{deleteConfirmState.groupName}"</strong>?
+                    </p>
+                  )
                 )}
                 {deleteConfirmState.type === 'reset' && (
-                  <p>
-                    با تایید این گزینه، تمامی لیست‌های ساخته شده توسط شما حذف شده و کلمات پیش‌فرض صرافی‌ها، ارزها و پشتیبانی مجدداً بارگذاری می‌شوند. آیا مایل به ادامه هستید؟
-                  </p>
+                  language === 'fa' ? (
+                    <p>
+                      با تایید این گزینه، تمامی لیست‌های ساخته شده توسط شما حذف شده و کلمات پیش‌فرض صرافی‌ها، ارزها و پشتیبانی مجدداً بارگذاری می‌شوند. آیا مایل به ادامه هستید؟
+                    </p>
+                  ) : (
+                    <p>
+                      By confirming, all your custom whitelists will be deleted, and default whitelists for exchanges, currencies, and support will be reloaded. Do you want to proceed?
+                    </p>
+                  )
                 )}
               </div>
 
@@ -2771,7 +2827,7 @@ export default function App() {
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
                 >
-                  انصراف
+                  {t('انصراف', 'Cancel')}
                 </button>
                 <button
                   type="button"
@@ -2790,7 +2846,9 @@ export default function App() {
                       : 'bg-rose-600 hover:bg-rose-500 shadow-md shadow-rose-600/15'
                   }`}
                 >
-                  تایید و حذف قطعی
+                  {deleteConfirmState.type === 'reset' 
+                    ? t('تایید و بازنشانی تنظیمات', 'Confirm and Reset Configuration') 
+                    : t('تایید و حذف قطعی', 'Confirm and Delete')}
                 </button>
               </div>
             </motion.div>
@@ -2828,7 +2886,7 @@ export default function App() {
                   <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold leading-tight mt-0.5">اقدام غیرمجاز</h3>
+                  <h3 className="text-xs font-bold leading-tight mt-0.5">{t('اقدام غیرمجاز', 'Unauthorized Action')}</h3>
                   <p className={`text-[11px] leading-relaxed mt-2.5 font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                     {alertMessage}
                   </p>
@@ -2841,7 +2899,7 @@ export default function App() {
                   onClick={() => setAlertMessage(null)}
                   className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer shadow-md shadow-indigo-600/15"
                 >
-                  متوجه شدم
+                  {t('متوجه شدم', 'Got it')}
                 </button>
               </div>
             </motion.div>
