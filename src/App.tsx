@@ -1723,7 +1723,9 @@ export default function App() {
             </div>
             <div>
               <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">کلمات لیست سفید منتخب</p>
-              <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>{selectedGroup ? selectedGroup.words.length : 0} کلمه</h3>
+              <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                {wordCloudUseAllChats ? 0 : (selectedGroup ? selectedGroup.words.length : 0)} کلمه
+              </h3>
             </div>
           </div>
 
