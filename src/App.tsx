@@ -1116,18 +1116,31 @@ export default function App() {
         if (word.length >= 2) {
           const lowerWord = word.toLowerCase();
           
-          // Check if word is part of ANY whitelist group or is the selected group word
-          const matchedGroup = whitelistGroups.find(g =>
-            g.words.some(w => w.word.trim().toLowerCase() === lowerWord)
-          );
-          
-          if (matchedGroup || !appliedStopWordsSet.has(lowerWord)) {
-            if (!freqMap[word]) {
-              freqMap[word] = { value: 0, chatIndices: [] };
+          if (wordCloudUseAllChats) {
+            // When calculating based on all chats (and ignoring whitelist), ONLY filter out stop words.
+            if (!appliedStopWordsSet.has(lowerWord)) {
+              if (!freqMap[word]) {
+                freqMap[word] = { value: 0, chatIndices: [] };
+              }
+              freqMap[word].value += 1;
+              if (!freqMap[word].chatIndices.includes(row.id)) {
+                freqMap[word].chatIndices.push(row.id);
+              }
             }
-            freqMap[word].value += 1;
-            if (!freqMap[word].chatIndices.includes(row.id)) {
-              freqMap[word].chatIndices.push(row.id);
+          } else {
+            // Standard mode: check if word matches a whitelist group or is not in stop words
+            const matchedGroup = whitelistGroups.find(g =>
+              g.words.some(w => w.word.trim().toLowerCase() === lowerWord)
+            );
+            
+            if (matchedGroup || !appliedStopWordsSet.has(lowerWord)) {
+              if (!freqMap[word]) {
+                freqMap[word] = { value: 0, chatIndices: [] };
+              }
+              freqMap[word].value += 1;
+              if (!freqMap[word].chatIndices.includes(row.id)) {
+                freqMap[word].chatIndices.push(row.id);
+              }
             }
           }
         }
@@ -1137,9 +1150,12 @@ export default function App() {
     // Transform freqMap into WordMetadata objects
     const candidates = Object.entries(freqMap).map(([text, data]) => {
       const lowerCand = text.toLowerCase();
-      const matchedGroup = whitelistGroups.find(g =>
-        g.words.some(w => w.word.trim().toLowerCase() === lowerCand)
-      );
+      // If we are in "use all chats" mode, do not assign any whitelist group style
+      const matchedGroup = wordCloudUseAllChats
+        ? null
+        : whitelistGroups.find(g =>
+            g.words.some(w => w.word.trim().toLowerCase() === lowerCand)
+          );
       return {
         text,
         value: data.value,
@@ -1173,10 +1189,11 @@ export default function App() {
     }
   }, [wordCloudDataArray, isJsonMode]);
 
-  // Keep selectedChatsForImage in sync with appliedChatsMatchingSelectedGroup
+  // Keep selectedChatsForImage in sync with active cloud chats
   useEffect(() => {
-    setSelectedChatsForImage(prev => prev.filter(c => appliedChatsMatchingSelectedGroup.some(m => m.id === c.id)));
-  }, [appliedChatsMatchingSelectedGroup]);
+    const activeChats = wordCloudUseAllChats ? activeFilteredChatRows : appliedChatsMatchingSelectedGroup;
+    setSelectedChatsForImage(prev => prev.filter(c => activeChats.some(m => m.id === c.id)));
+  }, [appliedChatsMatchingSelectedGroup, activeFilteredChatRows, wordCloudUseAllChats]);
 
   // Handle parsing of user-edited JSON array
   const handleJsonInputChange = (val: string) => {
@@ -1251,19 +1268,21 @@ export default function App() {
 
   // Filtered chats lists
   const matchedChatsList = useMemo(() => {
-    return appliedChatsMatchingSelectedGroup;
-  }, [appliedChatsMatchingSelectedGroup]);
+    return wordCloudUseAllChats ? activeFilteredChatRows : appliedChatsMatchingSelectedGroup;
+  }, [appliedChatsMatchingSelectedGroup, activeFilteredChatRows, wordCloudUseAllChats]);
 
   // Helper to highlight words in chat text
   const highlightMatchedWords = (text: string) => {
     if (!text) return '';
     let highlighted = text;
     
-    // Use selected group words to highlight
-    const groupWords = appliedSelectedGroup ? appliedSelectedGroup.words.map(w => w.word.trim()) : [];
+    // Use selected group words to highlight (or only the clicked word if using all chats)
+    const groupWords = wordCloudUseAllChats
+      ? (selectedWordMetadata ? [selectedWordMetadata.text] : [])
+      : (appliedSelectedGroup ? appliedSelectedGroup.words.map(w => w.word.trim()) : []);
     
     // Also highlight the currently clicked word from the word cloud if any
-    if (selectedWordMetadata && !groupWords.some(w => w.toLowerCase() === selectedWordMetadata.text.toLowerCase())) {
+    if (!wordCloudUseAllChats && selectedWordMetadata && !groupWords.some(w => w.toLowerCase() === selectedWordMetadata.text.toLowerCase())) {
       groupWords.push(selectedWordMetadata.text);
     }
 
@@ -1686,11 +1705,13 @@ export default function App() {
               <Filter className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">گفتگوهای شامل کلمات کلیدی</p>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                {wordCloudUseAllChats ? 'کل گفتگوهای تحلیل شده' : 'گفتگوهای شامل کلمات کلیدی'}
+              </p>
               <h3 className={`text-lg font-bold mt-0.5 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                {analysisResult.matchedChatsCount} چت 
+                {wordCloudUseAllChats ? analysisResult.totalChats : analysisResult.matchedChatsCount} چت 
                 <span className="text-xs text-slate-400 font-normal mr-1">
-                  ({analysisResult.totalChats > 0 ? Math.round((analysisResult.matchedChatsCount / analysisResult.totalChats) * 100) : 0}٪)
+                  ({analysisResult.totalChats > 0 ? Math.round(((wordCloudUseAllChats ? analysisResult.totalChats : analysisResult.matchedChatsCount) / analysisResult.totalChats) * 100) : 0}٪)
                 </span>
               </h3>
             </div>
@@ -2296,9 +2317,11 @@ export default function App() {
                 </div>
                 <div>
                   <h3 className={`text-sm font-bold flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                    <span>۲. مکالمات فیلتر شده بر اساس کلمات کلیدی لیست سفید</span>
+                    <span>{wordCloudUseAllChats ? '۲. کل مکالمات فعال بارگذاری شده جهت تحلیل' : '۲. مکالمات فیلتر شده بر اساس کلمات کلیدی لیست سفید'}</span>
                   </h3>
-                  <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>فهرست پیام‌هایی که شامل واژه‌های فیلتر شده هستند</p>
+                  <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {wordCloudUseAllChats ? 'فهرست تمامی پیام‌هایی که برای ساخت ابرکلمات پردازش شدند' : 'فهرست پیام‌هایی که شامل واژه‌های فیلتر شده هستند'}
+                  </p>
                 </div>
               </div>
 
@@ -2322,7 +2345,11 @@ export default function App() {
                   className="overflow-hidden"
                 >
                   <p className={`text-xs mb-4 leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    در زیر، تمامی پیام‌هایی که شامل حداقل یکی از واژه‌های تعریف شده در «لیست سفید» شما هستند را مشاهده می‌کنید. برای شفافیت، کلمات تطبیق داده شده با هایلایت <span className={`font-semibold px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-[#0057D9]/10 text-[#0057D9] border-[#0057D9]/15'}`}>آبی اعتماد</span> مشخص گردیده‌اند و گفتگوها بر اساس شناسه چت یکتا فیلتر شده‌اند تا از نمایش رکوردهای تکراری جلوگیری شود.
+                    {wordCloudUseAllChats ? (
+                      <span>در زیر، تمامی پیام‌های بارگذاری شده (پس از فیلترهای بالا) را مشاهده می‌کنید. تمامی این پیام‌ها برای استخراج ابرکلمات بررسی شده‌اند. در صورت تمایل می‌توانید روی هر کلمه در ابرکلمات کلیک کنید تا در چت‌های زیر هایلایت شود.</span>
+                    ) : (
+                      <span>در زیر، تمامی پیام‌هایی که شامل حداقل یکی از واژه‌های تعریف شده در «لیست سفید» شما هستند را مشاهده می‌کنید. برای شفافیت، کلمات تطبیق داده شده با هایلایت <span className={`font-semibold px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-[#0057D9]/10 text-[#0057D9] border-[#0057D9]/15'}`}>آبی اعتماد</span> مشخص گردیده‌اند و گفتگوها بر اساس شناسه چت یکتا فیلتر شده‌اند تا از نمایش رکوردهای تکراری جلوگیری شود.</span>
+                    )}
                   </p>
 
                   {/* Chat Selection Control Panel & Image Export */}
