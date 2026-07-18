@@ -415,7 +415,7 @@ function WordCloud({
 
         {/* Floating Legend / Information Banner */}
         <div className={`absolute bottom-3 right-3 left-3 flex justify-between items-center text-[9px] font-mono pointer-events-none z-20 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-          <span>{t('ابرکلمات تعاملی با کتابخانه react-wordcloud (تراز ۰ درجه)', 'Interactive word cloud with react-wordcloud (0° degree rotation)')}</span>
+          // <span>{t('ابرکلمات تعاملی با کتابخانه react-wordcloud (تراز ۰ درجه)', 'Interactive word cloud with react-wordcloud (0° degree rotation)')}</span>
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1">
               <span className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-[#F8FAFC]' : 'bg-[#0F172A]'}`} /> {t('تکرار بالا', 'High Frequency')}
