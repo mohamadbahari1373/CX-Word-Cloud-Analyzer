@@ -45,6 +45,7 @@ import { toPng } from 'html-to-image';
 import * as XLSX from 'xlsx';
 import { ChatRow, WhitelistWord, WhitelistGroup, WordMetadata, AnalysisResult } from './types';
 import WordCloud from './components/WordCloud';
+import LandingPage from './components/LandingPage';
 import { 
   parseAndConvertToJalali, 
   formatJalali, 
@@ -441,6 +442,9 @@ export default function App() {
 
   // Dockable Management Sidebar collapsed/expanded state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+
+  // View mode state ('landing' | 'app')
+  const [currentView, setCurrentView] = useState<'landing' | 'app'>('landing');
 
   useEffect(() => {
     localStorage.setItem('cx_theme', isDarkMode ? 'dark' : 'light');
@@ -1518,14 +1522,41 @@ export default function App() {
             <div className="w-8 h-8 bg-[#0057D9] rounded-sm rotate-45 flex items-center justify-center shrink-0 shadow-lg shadow-[#0057D9]/25">
               <div className="w-4 h-4 border-2 border-white -rotate-45"></div>
             </div>
-            <div>
-              <h1 className={`text-base md:text-lg font-bold tracking-tight flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-                {t('تحلیلگر محاسباتی  ابرکلمات تجربه مشتری (CX)', 'Customer Experience (CX) Computational Word Cloud Analyzer')}
-              </h1>
+            <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => setCurrentView('landing')} title={t('بازگشت به معرفی ابزار', 'Back to landing page')}>
+              <div className="w-8 h-8 bg-[#0057D9] rounded-sm rotate-45 flex items-center justify-center shrink-0 shadow-lg shadow-[#0057D9]/25">
+                <div className="w-4 h-4 border-2 border-white -rotate-45"></div>
+              </div>
+              <div>
+                <h1 className={`text-base md:text-lg font-bold tracking-tight flex items-center gap-2 ${isDarkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                  {t('تحلیلگر محاسباتی  ابرکلمات تجربه مشتری (CX)', 'Customer Experience (CX) Computational Word Cloud Analyzer')}
+                </h1>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
+            {/* View Switcher Button */}
+            <button
+              onClick={() => setCurrentView(currentView === 'landing' ? 'app' : 'landing')}
+              className={`px-3 py-2 rounded-lg border transition-all duration-300 cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
+                currentView === 'landing'
+                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 border-indigo-500 text-white hover:opacity-90 shadow-sm'
+                  : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900 shadow-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-305'
+              }`}
+            >
+              {currentView === 'landing' ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse shrink-0" />
+                  <span>{t('ورود به تحلیلگر', 'Launch Analyzer')}</span>
+                </>
+              ) : (
+                <>
+                  <Layers className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                  <span>{t('معرفی ابزار', 'About Tool')}</span>
+                </>
+              )}
+            </button>
+
             {/* Language Switcher */}
             <button
               onClick={() => setLanguage(language === 'fa' ? 'en' : 'fa')}
@@ -1539,19 +1570,21 @@ export default function App() {
               {language === 'fa' ? 'EN' : 'FA'}
             </button>
 
-            {/* Sidebar Toggle Button in Header */}
-            <button
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className={`p-2 rounded-lg border transition-all duration-300 cursor-pointer hidden md:flex items-center gap-1.5 ${
-                !isSidebarCollapsed 
-                  ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-sm' 
-                  : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900 shadow-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-350'
-              }`}
-              title={isSidebarCollapsed ? t('نمایش سایدبار مدیریت کلمات', 'Show word management sidebar') : t('پنهان‌سازی سایدبار مدیریت کلمات', 'Hide word management sidebar')}
-            >
-              <Sliders className="w-4 h-4" />
-              <span className="text-xs font-bold">{isSidebarCollapsed ? t('مدیریت کلمات', 'Word Mgmt') : t('بستن مدیریت', 'Close Mgmt')}</span>
-            </button>
+            {/* Sidebar Toggle Button in Header (Only when workspace app view is active) */}
+            {currentView === 'app' && (
+              <button
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className={`p-2 rounded-lg border transition-all duration-300 cursor-pointer hidden md:flex items-center gap-1.5 ${
+                  !isSidebarCollapsed 
+                    ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-500 shadow-sm' 
+                    : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900 shadow-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-350'
+                }`}
+                title={isSidebarCollapsed ? t('نمایش سایدبار مدیریت کلمات', 'Show word management sidebar') : t('پنهان‌سازی سایدبار مدیریت کلمات', 'Hide word management sidebar')}
+              >
+                <Sliders className="w-4 h-4" />
+                <span className="text-xs font-bold">{isSidebarCollapsed ? t('مدیریت کلمات', 'Word Mgmt') : t('بستن مدیریت', 'Close Mgmt')}</span>
+              </button>
+            )}
 
             {/* Theme Toggle Button */}
             <button
@@ -1577,8 +1610,16 @@ export default function App() {
         </div>
       </header>
 
-      {/* CORE WORKSPACE CONTENT */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {currentView === 'landing' ? (
+        <LandingPage 
+          onLaunchApp={() => setCurrentView('app')}
+          isDarkMode={isDarkMode}
+          language={language}
+        />
+      ) : (
+        <>
+          {/* CORE WORKSPACE CONTENT */}
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* COMPACT FILE UPLOAD SECTION AT THE TOP */}
         <section className="lg:col-span-12">
@@ -2729,10 +2770,12 @@ export default function App() {
 
       </main>
 
-      {/* FOOTER */}
-      <footer className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-6 border-t flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium w-full transition-colors duration-300 ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'}`}>
-        <span>© {new Date().getFullYear()} سیستم تحلیل‌گر ابرکلمات بازخورد مشتریان</span>
-      </footer>
+          {/* FOOTER */}
+          <footer className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-6 border-t flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium w-full transition-colors duration-300 ${isDarkMode ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'}`}>
+            <span>© {new Date().getFullYear()} سیستم تحلیل‌گر ابرکلمات بازخورد مشتریان</span>
+          </footer>
+        </>
+      )}
 
       {/* CUSTOM CONFIRMATION MODAL OVERLAY (Bypasses sandboxed iframe modal blocks) */}
       <AnimatePresence>
