@@ -38,7 +38,14 @@ import {
   Camera,
   Download,
   Sliders,
-  Settings
+  Settings,
+  Shield,
+  Lock,
+  User,
+  Users,
+  LogOut,
+  QrCode,
+  Key
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toPng } from 'html-to-image';
@@ -46,6 +53,8 @@ import * as XLSX from 'xlsx';
 import { ChatRow, WhitelistWord, WhitelistGroup, WordMetadata, AnalysisResult } from './types';
 import WordCloud from './components/WordCloud';
 import LandingPage from './components/LandingPage';
+import LoginView from './components/LoginView';
+import UserManagement from './components/UserManagement';
 import { 
   parseAndConvertToJalali, 
   formatJalali, 
@@ -445,6 +454,7 @@ export default function App() {
 
   // View mode state ('landing' | 'app')
   const [currentView, setCurrentView] = useState<'landing' | 'app'>('landing');
+  const [loginInitialMode, setLoginInitialMode] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     localStorage.setItem('cx_theme', isDarkMode ? 'dark' : 'light');
@@ -487,8 +497,76 @@ export default function App() {
 
   const [stopWordsInput, setStopWordsInput] = useState<string>('');
   const [stopWordsSearch, setStopWordsSearch] = useState<string>('');
-  const [activeManagementTab, setActiveManagementTab] = useState<'whitelist' | 'stopWords'>('whitelist');
+  const [activeManagementTab, setActiveManagementTab] = useState<'whitelist' | 'stopWords' | 'users'>('whitelist');
   const [isFilteredChatsExpanded, setIsFilteredChatsExpanded] = useState<boolean>(true);
+
+  // User authentication and session management states
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string; role: string; totpVerified: number } | null>(() => {
+    const saved = localStorage.getItem('cx_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error reading saved user session:", e);
+      }
+    }
+    return null;
+  });
+
+  // Change Password state
+  const [isChangingPassword, setIsChangingPassword] = useState<boolean>(false);
+  const [oldPassword, setOldPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [changePasswordError, setChangePasswordError] = useState<string>('');
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState<string>('');
+  const [changePasswordLoading, setChangePasswordLoading] = useState<boolean>(false);
+
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    if (!oldPassword || !newPassword) {
+      setChangePasswordError(t('لطفاً تمام فیلدها را پر کنید', 'Please fill in all fields'));
+      return;
+    }
+    if (newPassword.length < 4) {
+      setChangePasswordError(t('رمز عبور جدید باید حداقل ۴ کاراکتر باشد', 'New password must be at least 4 characters'));
+      return;
+    }
+
+    setChangePasswordError('');
+    setChangePasswordSuccess('');
+    setChangePasswordLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: currentUser.email,
+          oldPassword,
+          newPassword
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setChangePasswordSuccess(t('رمز عبور شما با موفقیت تغییر یافت', 'Your password has been changed successfully'));
+        setOldPassword('');
+        setNewPassword('');
+        setTimeout(() => {
+          setIsChangingPassword(false);
+          setChangePasswordSuccess('');
+        }, 1800);
+      } else {
+        setChangePasswordError(data.error || t('خطا در تغییر رمز عبور', 'Failed to change password'));
+      }
+    } catch (err) {
+      console.error(err);
+      setChangePasswordError(t('خطا در اتصال به سرور', 'Server connection error'));
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  };
 
   // SQLite Database synchronization state
   const [initialLoadComplete, setInitialLoadComplete] = useState<boolean>(false);
@@ -1519,9 +1597,6 @@ export default function App() {
       <header className={`border-b sticky top-0 z-50 backdrop-blur-md shadow-xs transition-colors duration-300 ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#0057D9] rounded-sm rotate-45 flex items-center justify-center shrink-0 shadow-lg shadow-[#0057D9]/25">
-              <div className="w-4 h-4 border-2 border-white -rotate-45"></div>
-            </div>
             <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => setCurrentView('landing')} title={t('بازگشت به معرفی ابزار', 'Back to landing page')}>
               <div className="w-8 h-8 bg-[#0057D9] rounded-sm rotate-45 flex items-center justify-center shrink-0 shadow-lg shadow-[#0057D9]/25">
                 <div className="w-4 h-4 border-2 border-white -rotate-45"></div>
@@ -1537,7 +1612,14 @@ export default function App() {
           <div className="flex items-center gap-4">
             {/* View Switcher Button */}
             <button
-              onClick={() => setCurrentView(currentView === 'landing' ? 'app' : 'landing')}
+              onClick={() => {
+                if (currentView === 'landing') {
+                  setLoginInitialMode('login');
+                  setCurrentView('app');
+                } else {
+                  setCurrentView('landing');
+                }
+              }}
               className={`px-3 py-2 rounded-lg border transition-all duration-300 cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
                 currentView === 'landing'
                   ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 border-indigo-500 text-white hover:opacity-90 shadow-sm'
@@ -1599,20 +1681,83 @@ export default function App() {
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            <div className="hidden sm:flex flex-col items-end text-left">
-              <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t('کارشناس بهبود تجربه مشتری', 'CX Expert')}</span>
-              <span className={`text-[9px] uppercase font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t('وضعیت سیستم: آنلاین', 'SYSTEM: ONLINE')}</span>
-            </div>
-            <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
-              <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
-            </div>
+            {currentUser ? (
+              <div className="flex items-center gap-2.5">
+                <div className="hidden md:flex flex-col items-end text-left select-none">
+                  <span className={`text-[11px] font-bold ${isDarkMode ? 'text-slate-300 font-mono' : 'text-slate-700 font-mono'}`}>{currentUser.email}</span>
+                  <span className={`text-[9px] font-extrabold uppercase tracking-widest ${currentUser.role === 'admin' ? 'text-indigo-400' : 'text-emerald-500'}`}>
+                    {currentUser.role === 'admin' ? t('مدیر سیستم', 'Admin') : t('کارشناس تحلیل', 'Analyst')}
+                  </span>
+                </div>
+                
+                {/* Change Password Button */}
+                <button
+                  onClick={() => {
+                    setOldPassword('');
+                    setNewPassword('');
+                    setChangePasswordError('');
+                    setChangePasswordSuccess('');
+                    setIsChangingPassword(true);
+                  }}
+                  className={`p-2 rounded-lg border transition-all duration-300 cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-slate-800 border-slate-700 text-indigo-400 hover:bg-slate-700' 
+                      : 'bg-slate-100 border-slate-200 text-indigo-600 hover:bg-slate-200'
+                  }`}
+                  title={t('تغییر رمز عبور', 'Change Password')}
+                >
+                  <Key className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Sign Out Button */}
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('cx_user');
+                    setCurrentUser(null);
+                    setCurrentView('landing');
+                    setActiveManagementTab('whitelist');
+                  }}
+                  className={`p-2 rounded-lg border transition-all duration-300 cursor-pointer ${
+                    isDarkMode 
+                      ? 'bg-rose-500/10 border-rose-500/20 text-rose-400 hover:bg-rose-500/20' 
+                      : 'bg-rose-50 border-rose-100 text-rose-600 hover:bg-rose-100'
+                  }`}
+                  title={t('خروج از حساب کاربری', 'Sign Out')}
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="hidden sm:flex flex-col items-end text-left">
+                  <span className={`text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t('کارشناس بهبود تجربه مشتری', 'CX Expert')}</span>
+                  <span className={`text-[9px] uppercase font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t('وضعیت سیستم: آنلاین', 'SYSTEM: ONLINE')}</span>
+                </div>
+                <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
+                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>
 
       {currentView === 'landing' ? (
         <LandingPage 
-          onLaunchApp={() => setCurrentView('app')}
+          onLaunchApp={(mode) => {
+            setLoginInitialMode(mode || 'login');
+            setCurrentView('app');
+          }}
+          isDarkMode={isDarkMode}
+          language={language}
+        />
+      ) : currentUser === null ? (
+        <LoginView
+          initialMode={loginInitialMode}
+          onLoginSuccess={(user) => {
+            setCurrentUser(user);
+            setActiveManagementTab('whitelist');
+          }}
           isDarkMode={isDarkMode}
           language={language}
         />
@@ -1857,29 +2002,42 @@ export default function App() {
             
             {/* Unified Tabs Header & Collapse Button */}
             <div className={`flex border-b items-center justify-between ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-              <div className="flex flex-1">
+              <div className="flex flex-1 overflow-x-auto scrollbar-none">
                 <button
                   onClick={() => setActiveManagementTab('whitelist')}
-                  className={`flex-1 py-3 px-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 min-w-[80px] py-3 px-2 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer ${
                     activeManagementTab === 'whitelist'
                       ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5'
                       : 'border-transparent text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  <Layers className="w-4 h-4" />
-                  <span>{t('لیست‌های سفید', 'White Lists')}</span>
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>{t('لیست سفید', 'Whitelists')}</span>
                 </button>
                 <button
                   onClick={() => setActiveManagementTab('stopWords')}
-                  className={`flex-1 py-3 px-4 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`flex-1 min-w-[80px] py-3 px-2 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer ${
                     activeManagementTab === 'stopWords'
                       ? 'border-rose-600 text-rose-600 dark:text-rose-400 bg-rose-500/5'
                       : 'border-transparent text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  <Filter className="w-4 h-4" />
+                  <Filter className="w-3.5 h-3.5" />
                   <span>{t('کلمات استاپ', 'Stop Words')}</span>
                 </button>
+                {currentUser?.role === 'admin' && (
+                  <button
+                    onClick={() => setActiveManagementTab('users')}
+                    className={`flex-1 min-w-[80px] py-3 px-2 text-xs font-bold transition-all border-b-2 flex items-center justify-center gap-1 cursor-pointer ${
+                      activeManagementTab === 'users'
+                        ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
+                        : 'border-transparent text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>{t('کاربران', 'Users')}</span>
+                  </button>
+                )}
               </div>
 
               {/* Collapse Button */}
@@ -1896,7 +2054,7 @@ export default function App() {
 
             {/* Container for active tab content */}
             <div className="p-5 flex flex-col">
-              {activeManagementTab === 'whitelist' ? (
+              {activeManagementTab === 'whitelist' && (
                 <div id="whitelist-panel" className="flex flex-col">
                   <div className="flex items-center justify-between pb-3 mb-4 border-b border-dashed dark:border-slate-800 border-slate-100">
                     <h3 className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t('لیست‌های سفید (دسته‌بندی شده)', 'Whitelists (Categorized)')}</h3>
@@ -2151,7 +2309,8 @@ export default function App() {
                     );
                   })()}
                 </div>
-              ) : (
+              )}
+              {activeManagementTab === 'stopWords' && (
                 <div id="stop-words-panel" className="flex flex-col">
                   <div className="flex items-center justify-between pb-3 mb-4 border-b border-dashed dark:border-slate-800 border-slate-100">
                     <h3 className={`text-xs font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{t('مدیریت کلمات استاپ (Stop Words)', 'Manage Stop Words')}</h3>
@@ -2294,6 +2453,13 @@ export default function App() {
                     <span>{t('تعداد کل کلمات استاپ:', 'Total Stop Words:')} {stopWords.length} {t('کلمه', 'words')}</span>
                   </div>
                 </div>
+              )}
+              {activeManagementTab === 'users' && currentUser?.role === 'admin' && (
+                <UserManagement 
+                  currentUser={currentUser} 
+                  isDarkMode={isDarkMode} 
+                  language={language} 
+                />
               )}
             </div>
 
@@ -2894,6 +3060,117 @@ export default function App() {
                     : t('تایید و حذف قطعی', 'Confirm and Delete')}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CHANGE PASSWORD DIALOG */}
+      <AnimatePresence>
+        {isChangingPassword && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsChangingPassword(false)}
+              className="absolute inset-0 bg-slate-950/65 backdrop-blur-xs"
+            />
+            
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className={`relative z-10 w-full max-w-md rounded-2xl border p-6 shadow-2xl transition-colors duration-300 ${
+                isDarkMode 
+                  ? 'bg-slate-900 border-slate-800 text-slate-100' 
+                  : 'bg-white border-slate-200 text-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-3 pb-4 mb-4 border-b border-dashed dark:border-slate-800 border-slate-100">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 shrink-0">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold leading-none">{t('تغییر رمز عبور', 'Change Password')}</h3>
+                  <p className="text-[10px] text-slate-400 mt-1">{t('لطفاً رمز عبور فعلی و جدید خود را وارد کنید.', 'Please enter your current and new password.')}</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
+                {changePasswordError && (
+                  <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{changePasswordError}</span>
+                  </div>
+                )}
+
+                {changePasswordSuccess && (
+                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-semibold flex items-center gap-1.5">
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span>{changePasswordSuccess}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[11px] font-bold mb-1.5 text-slate-400 uppercase tracking-wide">
+                    {t('رمز عبور فعلی', 'Current Password')}
+                  </label>
+                  <input
+                    type="password"
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    required
+                    className={`w-full text-xs px-3 py-2.5 rounded-lg outline-none border transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-950 border-slate-800 text-slate-100 focus:border-indigo-500/50' 
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-500/50'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold mb-1.5 text-slate-400 uppercase tracking-wide">
+                    {t('رمز عبور جدید', 'New Password')}
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    className={`w-full text-xs px-3 py-2.5 rounded-lg outline-none border transition-all ${
+                      isDarkMode 
+                        ? 'bg-slate-950 border-slate-800 text-slate-100 focus:border-indigo-500/50' 
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-indigo-500/50'
+                    }`}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2.5 pt-2 border-t dark:border-slate-800 border-slate-100 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsChangingPassword(false)}
+                    disabled={changePasswordLoading}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      isDarkMode 
+                        ? 'bg-slate-850 text-slate-300 hover:bg-slate-800' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-150'
+                    }`}
+                  >
+                    {t('انصراف', 'Cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={changePasswordLoading}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-md shadow-indigo-600/15"
+                  >
+                    {changePasswordLoading ? t('در حال ذخیره...', 'Saving...') : t('ذخیره تغییرات', 'Save Changes')}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

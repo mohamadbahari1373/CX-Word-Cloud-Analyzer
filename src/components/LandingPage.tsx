@@ -22,7 +22,7 @@ import {
 import { motion } from 'motion/react';
 
 interface LandingPageProps {
-  onLaunchApp: () => void;
+  onLaunchApp: (mode?: 'login' | 'register') => void;
   isDarkMode: boolean;
   language: 'fa' | 'en';
 }
@@ -59,16 +59,6 @@ export default function LandingPage({ onLaunchApp, isDarkMode, language }: Landi
           
           {/* Hero text information */}
           <div className="lg:col-span-7 flex flex-col text-center lg:text-right" style={{ direction: language === 'fa' ? 'rtl' : 'ltr' }}>
-            <motion.div 
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-1.5 self-center lg:self-start px-3 py-1 rounded-full text-xs font-bold mb-6 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{t('نسخه ۳.۲ - مجهز به موتور محاسباتی هوشمند', 'v3.2 - Equipped with Intelligent Compute Engine')}</span>
-            </motion.div>
-
             <motion.h1 
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
@@ -105,7 +95,7 @@ export default function LandingPage({ onLaunchApp, isDarkMode, language }: Landi
               className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start"
             >
               <button
-                onClick={onLaunchApp}
+                onClick={() => onLaunchApp('login')}
                 className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/35 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0 group"
               >
                 <Play className="w-4 h-4 fill-current shrink-0" />
@@ -116,7 +106,18 @@ export default function LandingPage({ onLaunchApp, isDarkMode, language }: Landi
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1 shrink-0" />
                 )}
               </button>
-              
+
+              <button
+                onClick={() => onLaunchApp('register')}
+                className={`w-full sm:w-auto px-6 py-4 rounded-xl border text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-indigo-500/10 cursor-pointer ${
+                  isDarkMode 
+                    ? 'border-indigo-500/30 text-indigo-400 hover:border-indigo-500/50' 
+                    : 'border-indigo-200 text-indigo-650 hover:border-indigo-300'
+                }`}
+              >
+                <span>{t('ثبت نام', 'Sign Up')}</span>
+              </button>
+
               <a
                 href="#features-bento"
                 className={`w-full sm:w-auto px-6 py-4 rounded-xl border text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-slate-500/5 cursor-pointer ${
@@ -142,18 +143,6 @@ export default function LandingPage({ onLaunchApp, isDarkMode, language }: Landi
                   : 'bg-white border-slate-200/80 shadow-slate-300/50'
               }`}
             >
-              {/* Card header */}
-              <div className="flex items-center justify-between pb-4 border-b border-dashed dark:border-slate-800 border-slate-100 mb-6">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 bg-[#0057D9] rounded-full animate-pulse" />
-                  <span className="text-[10px] font-bold font-mono text-slate-400">CX_LIVE_SIMULATOR</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[9px] font-mono text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full font-bold">
-                  <Clock className="w-3 h-3" />
-                  <span>{t('تحلیل همزمان', 'Real-time sync')}</span>
-                </div>
-              </div>
-
               {/* Wordcloud Simulation Box */}
               <div className="h-[220px] w-full flex flex-wrap items-center justify-center gap-x-4 gap-y-2 relative rounded-xl p-3 border dark:border-slate-800/50 border-slate-100 bg-slate-500/5 select-none">
                 {heroKeywords.map((word, index) => {
@@ -177,11 +166,7 @@ export default function LandingPage({ onLaunchApp, isDarkMode, language }: Landi
               <div className="mt-4 pt-3 border-t dark:border-slate-800 border-slate-100 min-h-[50px] flex items-center justify-between text-xs transition-all duration-300">
                 {activeHeroKeyword ? (
                   <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-400 font-bold">{t('کلمه هدف:', 'Target:')}</span>
-                      <strong className="text-indigo-600 dark:text-indigo-400 font-black">{activeHeroKeyword}</strong>
-                    </div>
-                    <div className="flex items-center gap-1 font-mono">
+                    <div className="flex items-center gap-1 font-mono w-full justify-center">
                       <span className="text-[10px] text-slate-400 font-bold">{t('تکرار کل:', 'Occurrences:')}</span>
                       <span className="bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded font-black">
                         {heroKeywords.find(k => k.text === activeHeroKeyword)?.count}
